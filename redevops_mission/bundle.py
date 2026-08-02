@@ -34,15 +34,18 @@ class CaseBundle:
     outcome: dict | None
     events: list[dict] = field(default_factory=list)   # [{seq, type, payload}]
     steps: list[dict] = field(default_factory=list)     # the mission definition (so replay is self-contained)
+    source: str = "human:template"                       # the kind of author
+    origin: dict | None = None                           # the triggering record (the "why")
     digest: str = ""
     schema_version: str = SCHEMA_VERSION
 
     @classmethod
-    def from_run(cls, program: str, goal: str, mission_id: str, state: str,
-                 outcome: dict | None, events, steps: list[dict] | None = None) -> "CaseBundle":
+    def from_run(cls, program: str, goal: str, mission_id: str, state: str, outcome: dict | None,
+                 events, steps: list[dict] | None = None, source: str = "human:template",
+                 origin: dict | None = None) -> "CaseBundle":
         evs = [{"seq": e.seq, "type": e.type, "payload": e.payload} for e in events]
-        return cls(program=program, goal=goal, mission_id=mission_id, state=state,
-                   outcome=outcome, events=evs, steps=list(steps or []), digest=_digest(evs))
+        return cls(program=program, goal=goal, mission_id=mission_id, state=state, outcome=outcome,
+                   events=evs, steps=list(steps or []), source=source, origin=origin, digest=_digest(evs))
 
     def integrity_ok(self) -> bool:
         """The events have not been tampered with since the bundle was built."""
@@ -57,8 +60,8 @@ class CaseBundle:
     @classmethod
     def from_json(cls, text: str) -> "CaseBundle":
         d = json.loads(text)
-        return cls(**{k: d[k] for k in ("program", "goal", "mission_id", "state", "outcome",
-                                        "events", "steps", "digest", "schema_version") if k in d})
+        return cls(**{k: d[k] for k in ("program", "goal", "mission_id", "state", "outcome", "events",
+                                        "steps", "source", "origin", "digest", "schema_version") if k in d})
 
 
 # ---- build -------------------------------------------------------------------------------------------
@@ -69,7 +72,8 @@ def export_bundle(program, operators, *, approve: bool = True, ledger_path: str 
 
     rt, mid, m, _ = drive(program, operators, approve=approve, ledger_path=ledger_path)
     return CaseBundle.from_run(program.name, program.goal, mid, m.state.value, m.outcome,
-                               rt.store.for_mission(mid), steps=program_step_dicts(program))
+                               rt.store.for_mission(mid), steps=program_step_dicts(program),
+                               source=program.source, origin=program.origin)
 
 
 # ---- replay ------------------------------------------------------------------------------------------

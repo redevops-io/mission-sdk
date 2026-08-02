@@ -32,12 +32,18 @@ class MissionProposal:
     """A source-agnostic mission description — what a human template, a domain compiler (e.g. Quantify),
     or the Discovery Runtime emits. It compiles to a `MissionProgram` the *same way regardless of source*
     (design §13.3: one compilation path), so a proposed mission is validated, run, replayed and gated
-    exactly like a hand-authored one. `source` is provenance, e.g. "discovery", "compiler:quantify"."""
+    exactly like a hand-authored one.
+
+    `source` is the *kind* of author (e.g. "discovery", "compiler:quantify"). `origin` is the *why* — the
+    specific record that authorized this mission (a Discovery signal, a decision, a requirement), so a
+    replay/audit can answer "what triggered this run", not just "what ran". Conventional keys:
+    `{"kind": "discovery:signal"|"decision"|"requirement"|..., "ref": "<id>", "detail": "<text>"}`."""
     name: str
     goal: str
     steps: list[MissionStep] = field(default_factory=list)
     grants: list[str] = field(default_factory=list)
     source: str = "unknown"
+    origin: dict | None = None
 
 
 @dataclass
@@ -47,6 +53,7 @@ class MissionProgram:
     grants: list[str] = field(default_factory=list)
     steps: list[MissionStep] = field(default_factory=list)
     source: str = "human:template"
+    origin: dict | None = None          # the triggering record (the "why"); see MissionProposal
     schema_version: str = SCHEMA_VERSION
 
     # ---- authoring ---------------------------------------------------------------------------------
@@ -69,7 +76,8 @@ class MissionProgram:
         compiler's output becomes a `MissionProgram`, carrying its provenance. From here it is identical
         to a hand-authored program — same validate / run / replay / ci."""
         return cls(name=proposal.name, goal=proposal.goal, grants=list(proposal.grants),
-                   steps=[MissionStep(**{**vars(s)}) for s in proposal.steps], source=proposal.source)
+                   steps=[MissionStep(**{**vars(s)}) for s in proposal.steps],
+                   source=proposal.source, origin=proposal.origin)
 
     # ---- serialization -----------------------------------------------------------------------------
     def to_dict(self) -> dict:
@@ -83,7 +91,7 @@ class MissionProgram:
         return cls(
             name=d["name"], goal=d.get("goal", ""), grants=list(d.get("grants", [])),
             steps=[MissionStep(**s) for s in d.get("steps", [])],
-            source=d.get("source", "human:template"),
+            source=d.get("source", "human:template"), origin=d.get("origin"),
             schema_version=d.get("schema_version", SCHEMA_VERSION),
         )
 

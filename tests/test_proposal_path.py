@@ -6,9 +6,10 @@ import importlib.util
 import os
 
 from redevops_mission import (
-    MissionProgram, MissionProposal, MissionStep, export_bundle, mission_ci, replay_bundle,
-    run_program, validate,
+    MissionProgram, MissionProposal, MissionStep, Operator, capability, export_bundle, mission_ci,
+    replay_bundle, run_program, validate,
 )
+from redevops_mission.bundle import CaseBundle
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURE = os.path.join(HERE, os.pardir, "examples", "from_proposal", "mission.py")
@@ -27,6 +28,22 @@ def test_from_proposal_carries_provenance():
     program = MissionProgram.from_proposal(p)
     assert program.source == "discovery"
     assert program.name == "m" and program.steps[0].outcome == "done"
+
+
+def test_origin_the_why_threads_proposal_to_bundle():
+    """The triggering record (the "why") survives proposal → program → case bundle → JSON, so a replay
+    or audit can answer 'what authorized this run', not just 'what ran'."""
+    why = {"kind": "discovery:signal", "ref": "sig_42", "detail": "error-rate SLO breach"}
+    p = MissionProposal(name="rescue", goal="Mitigate the breach", source="discovery", origin=why,
+                        steps=[MissionStep(outcome="mitigated", need="apply the mitigation")],
+                        grants=["ops:write"])
+    program = MissionProgram.from_proposal(p)
+    assert program.origin == why
+    ops = [Operator("ops", [capability("ops.fix", handler=lambda i: {"ok": True},
+                                       provides=["mitigated"], permissions=["ops:write"])])]
+    bundle = export_bundle(program, ops)
+    assert bundle.origin == why and bundle.source == "discovery"
+    assert CaseBundle.from_json(bundle.to_json()).origin == why   # survives the wire
 
 
 def test_compiler_emitted_mission_validates_runs_and_gates():
