@@ -16,7 +16,7 @@ import json
 from dataclasses import asdict, dataclass, field
 
 from ._bootstrap import ensure_runtime
-from ._compile import build_registry
+from ._compile import build_registry, register_steps_template
 
 SCHEMA_VERSION = "0.1"
 
@@ -33,15 +33,16 @@ class CaseBundle:
     state: str
     outcome: dict | None
     events: list[dict] = field(default_factory=list)   # [{seq, type, payload}]
+    steps: list[dict] = field(default_factory=list)     # the mission definition (so replay is self-contained)
     digest: str = ""
     schema_version: str = SCHEMA_VERSION
 
     @classmethod
     def from_run(cls, program: str, goal: str, mission_id: str, state: str,
-                 outcome: dict | None, events) -> "CaseBundle":
+                 outcome: dict | None, events, steps: list[dict] | None = None) -> "CaseBundle":
         evs = [{"seq": e.seq, "type": e.type, "payload": e.payload} for e in events]
         return cls(program=program, goal=goal, mission_id=mission_id, state=state,
-                   outcome=outcome, events=evs, digest=_digest(evs))
+                   outcome=outcome, events=evs, steps=list(steps or []), digest=_digest(evs))
 
     def integrity_ok(self) -> bool:
         """The events have not been tampered with since the bundle was built."""
@@ -57,17 +58,18 @@ class CaseBundle:
     def from_json(cls, text: str) -> "CaseBundle":
         d = json.loads(text)
         return cls(**{k: d[k] for k in ("program", "goal", "mission_id", "state", "outcome",
-                                        "events", "digest", "schema_version") if k in d})
+                                        "events", "steps", "digest", "schema_version") if k in d})
 
 
 # ---- build -------------------------------------------------------------------------------------------
 def export_bundle(program, operators, *, approve: bool = True, ledger_path: str | None = None) -> CaseBundle:
     """Run the mission (auto-approving gates by default so it reaches a terminal state) and bundle it."""
+    from ._compile import program_step_dicts
     from .profiles import drive
 
     rt, mid, m, _ = drive(program, operators, approve=approve, ledger_path=ledger_path)
     return CaseBundle.from_run(program.name, program.goal, mid, m.state.value, m.outcome,
-                               rt.store.for_mission(mid))
+                               rt.store.for_mission(mid), steps=program_step_dicts(program))
 
 
 # ---- replay ------------------------------------------------------------------------------------------
@@ -97,6 +99,11 @@ def replay_bundle(bundle: CaseBundle, operators) -> ReplayResult:
     from agentic_os.mission.operator_sdk import LocalOperatorClient
     from agentic_os.mission.runtime import MissionRuntime
     from agentic_os.mission.store import EventStore
+
+    # The runtime's rehydrate re-compiles the plan, so the template must be present even in a fresh
+    # process. The bundle carries its own step definitions, so replay is self-contained.
+    if bundle.steps:
+        register_steps_template(bundle.program, bundle.steps)
 
     store = EventStore()
     for e in bundle.events:

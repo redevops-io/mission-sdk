@@ -6,7 +6,8 @@ import importlib.util
 import os
 
 from redevops_mission import (
-    MissionProgram, MissionProposal, MissionStep, mission_ci, run_program, validate,
+    MissionProgram, MissionProposal, MissionStep, export_bundle, mission_ci, replay_bundle,
+    run_program, validate,
 )
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -42,3 +43,17 @@ def test_proposal_program_json_roundtrip_keeps_source():
     rt = MissionProgram.from_json(m.PROGRAM.to_json())
     assert rt.source == "compiler:quantify"
     assert rt.to_dict() == m.PROGRAM.to_dict()
+
+
+def test_replay_of_proposal_is_self_contained_in_a_fresh_process():
+    """A from_proposal mission has no @template, so a fresh process (or a cleared registry) has nothing
+    registered. Replay must reconstruct the template from the bundle's own steps — the runtime's
+    rehydrate re-compiles the plan. This is the cross-process case the parity check surfaced."""
+    from agentic_os.mission.templates import TEMPLATES
+
+    m = _load()
+    b = export_bundle(m.PROGRAM, m.OPERATORS)          # succeeds; carries its step definitions
+    TEMPLATES.pop(m.PROGRAM.name, None)                # forget the dynamically-registered template
+    r = replay_bundle(b, m.OPERATORS)                  # must re-register from bundle.steps
+    assert r.consistent and r.integrity_ok
+    assert r.recorded_state == r.replayed_state == "succeeded"

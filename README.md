@@ -12,12 +12,15 @@ through this package and the `rdo mission` CLI, **without importing runtime inte
 
 ## Install (local development)
 
-The SDK depends on the ReDevOps runtime (`agentic_os`). For local development, place this repo beside
-an `agentic-os-src` checkout (or set `AGENTIC_OS_SRC`); a released install pins `agentic-os` instead.
+The SDK depends on the ReDevOps runtime, **pinned to the public `agentic-os`** (parity-checked against
+the SDK's actual contract — see [PARITY.md](PARITY.md)):
 
 ```bash
-pip install -e .        # exposes the `rdo` command
+pip install -e .        # resolves the pinned `agentic-os` from git; exposes the `rdo` command
 ```
+
+For development against a local runtime checkout, set `AGENTIC_OS_SRC` — a **loud, opt-in** override, so
+the SDK is never silently satisfied by an unknown checkout (unset ⇒ a clear ImportError).
 
 ## Author a mission
 

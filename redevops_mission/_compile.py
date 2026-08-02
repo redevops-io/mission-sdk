@@ -36,17 +36,35 @@ def build_intent_from_program(program, mission_id: str) -> ExecutionIntent:
     )
 
 
-def register_program_template(program) -> None:
-    """Register the program's steps as the runtime template it plans from, so a `MissionProgram` runs
-    regardless of whether a `@template` was declared. This is what makes the compilation path the same
-    for a hand-authored mission and a `from_proposal` one (Discovery / a domain compiler): the runtime
-    always plans from the program's own steps."""
+def register_steps_template(name: str, steps: list[dict]) -> None:
+    """Register a runtime template from plain step dicts (outcome/need/after/constraints/value). Used to
+    plan from a program's own steps — and, crucially, to re-register on `replay` in a fresh process,
+    where the runtime's `rehydrate` re-compiles the plan and needs the template present."""
     from agentic_os.mission.templates import TEMPLATES
 
-    def factory(mission_id, _program=program):
-        return build_intent_from_program(_program, mission_id)
+    def factory(mission_id, _steps=steps, _name=name):
+        return ExecutionIntent(
+            mission_id=mission_id, rationale=f"{_name} program",
+            steps=[
+                IntentStep(outcome=s["outcome"], need=s["need"], inputs_from=list(s.get("after", [])),
+                           constraints=list(s.get("constraints", [])), value_hint=s.get("value", "medium"))
+                for s in _steps
+            ],
+        )
 
-    TEMPLATES[program.name] = factory
+    TEMPLATES[name] = factory
+
+
+def program_step_dicts(program) -> list[dict]:
+    return [{"outcome": s.outcome, "need": s.need, "after": s.after,
+             "constraints": s.constraints, "value": s.value} for s in program.steps]
+
+
+def register_program_template(program) -> None:
+    """Register the program's steps as the runtime template it plans from, so a `MissionProgram` runs
+    regardless of whether a `@template` was declared — the same compilation path for a hand-authored
+    mission and a `from_proposal` one (Discovery / a domain compiler)."""
+    register_steps_template(program.name, program_step_dicts(program))
 
 
 def compile_program(program, operators):

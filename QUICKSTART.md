@@ -4,12 +4,11 @@ Author, inspect, run, and gate a governed mission — end to end, on your laptop
 
 ## 1. Install
 
-The SDK depends on the ReDevOps runtime (`agentic_os`). Until it is published, place this repo beside an
-`agentic-os-src` checkout, or point `AGENTIC_OS_SRC` at one:
+The SDK depends on the ReDevOps runtime, pinned to the public `agentic-os` (see [PARITY.md](PARITY.md)):
 
 ```bash
-pip install -e .
-# export AGENTIC_OS_SRC=/path/to/agentic-os-src     # if the runtime isn't a sibling checkout
+pip install -e .                                   # resolves the pinned `agentic-os`
+# export AGENTIC_OS_SRC=/path/to/agentic-os        # dev-only override against a local runtime checkout
 ```
 
 ## 2. Scaffold a mission

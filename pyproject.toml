@@ -8,10 +8,11 @@ version = "0.1.0a0"
 description = "Mission SDK — the developer boundary over the ReDevOps Mission Runtime (author, validate, explain, run, replay a governed MissionProgram)."
 requires-python = ">=3.10"
 readme = "README.md"
-# The one runtime dependency. Pinned to a version once runtime-contracts freezes; for local
-# development the runtime is resolved from a sibling `agentic-os-src` checkout (see _bootstrap.py).
+# The one runtime dependency. Parity checked against the SDK's actual import surface (see PARITY.md):
+# public `agentic-os` satisfies the SDK contract exactly. It is untagged, so alpha pins the commit;
+# switch to `agentic-os==0.1.0aN` once a release is tagged. `AGENTIC_OS_SRC` is a dev-only override.
 dependencies = [
-  # "agentic-os==<pinned>",
+  "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@d261825fe18acb7f93a958b88cc59695fa97c11a",
 ]
 
 [project.scripts]
