@@ -13,6 +13,9 @@ from .api import (
     Explanation, ProfileReport, SimReport, ValidateReport, explain, profile, simulate, validate,
 )
 from .authoring import Operator, capability, step, template
+from .bundle import (
+    CaseBundle, ReplayResult, VerifyReport, diff_bundles, export_bundle, replay_bundle, verify_bundle,
+)
 from .profiles import RunResult, run_program
 from .program import MissionProgram, MissionStep
 
@@ -22,5 +25,7 @@ __all__ = [
     "template", "step", "capability", "Operator",
     "MissionProgram", "MissionStep",
     "validate", "explain", "simulate", "profile", "run_program",
+    "export_bundle", "replay_bundle", "diff_bundles", "verify_bundle",
     "ValidateReport", "Explanation", "SimReport", "ProfileReport", "RunResult",
+    "CaseBundle", "ReplayResult", "VerifyReport",
 ]

@@ -14,6 +14,7 @@ import sys
 
 from .api import explain, profile, simulate, validate
 from ._compile import CompileError
+from .bundle import CaseBundle, diff_bundles, diff_text, export_bundle, replay_bundle, verify_bundle
 from .profiles import run_program
 
 
@@ -77,27 +78,84 @@ def _cmd_run(args) -> int:
     return 2 if result.state == "waiting_human" else 1
 
 
+def _cmd_bundle(args) -> int:
+    program, operators = _load_module(args.target)
+    bundle = export_bundle(program, operators)
+    if args.out:
+        with open(args.out, "w") as f:
+            f.write(bundle.to_json())
+        print(f"bundle: wrote {len(bundle.events)} events → {args.out}  (state={bundle.state}, digest={bundle.digest})")
+    else:
+        print(bundle.to_json())
+    return 0
+
+
+def _cmd_replay(args) -> int:
+    _, operators = _load_module(args.target)
+    with open(args.bundle) as f:
+        bundle = CaseBundle.from_json(f.read())
+    result = replay_bundle(bundle, operators)
+    print(result.to_text())
+    return 0 if result.consistent else 1
+
+
+def _cmd_diff(args) -> int:
+    with open(args.a) as f:
+        a = CaseBundle.from_json(f.read())
+    with open(args.b) as f:
+        b = CaseBundle.from_json(f.read())
+    print(diff_text(diff_bundles(a, b)))
+    return 0
+
+
+def _cmd_verify(args) -> int:
+    program, operators = _load_module(args.target)
+    report = verify_bundle(export_bundle(program, operators))
+    print(report.to_text())
+    return 0 if report.succeeded and report.integrity_ok else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="rdo", description="ReDevOps developer CLI")
     groups = parser.add_subparsers(dest="group", required=True)
 
     mission = groups.add_parser("mission", help="author, inspect, and operate missions")
     verbs = mission.add_subparsers(dest="verb", required=True)
+
+    TARGET = "path to a mission module (.py exposing PROGRAM + OPERATORS)"
+
+    # read-only + run verbs, all taking a single mission-module target
     for verb, fn, helptext in (
         ("validate", _cmd_validate, "static + compile checks on a mission module"),
         ("explain", _cmd_explain, "render the compiled physical graph"),
         ("profile", _cmd_profile, "EXPLAIN ANALYZE — topology + projected cost/latency/success"),
         ("simulate", _cmd_simulate, "dry-run projection (no execution, no model calls)"),
         ("run", _cmd_run, "execute on the local single-node profile"),
+        ("verify", _cmd_verify, "run + report what the runtime verified (success, integrity, stages)"),
     ):
         p = verbs.add_parser(verb, help=helptext)
-        p.add_argument("target", help="path to a mission module (.py exposing PROGRAM + OPERATORS)")
+        p.add_argument("target", help=TARGET)
         if verb == "run":
             p.add_argument("--approve", action="store_true",
                            help="auto-approve human gates and drive to completion")
             p.add_argument("--ledger", metavar="PATH", default=None,
                            help="persist the event ledger to an append-only file (default: in-memory)")
         p.set_defaults(_fn=fn)
+
+    pb = verbs.add_parser("bundle", help="run + export a portable, self-verifying case bundle")
+    pb.add_argument("target", help=TARGET)
+    pb.add_argument("--out", metavar="PATH", default=None, help="write the bundle JSON here (default: stdout)")
+    pb.set_defaults(_fn=_cmd_bundle)
+
+    pr = verbs.add_parser("replay", help="rebuild a run from its bundle and confirm the terminal state")
+    pr.add_argument("target", help=TARGET)
+    pr.add_argument("bundle", help="path to a case bundle JSON")
+    pr.set_defaults(_fn=_cmd_replay)
+
+    pd = verbs.add_parser("diff", help="structural diff of two case bundles")
+    pd.add_argument("a", help="case bundle JSON")
+    pd.add_argument("b", help="case bundle JSON")
+    pd.set_defaults(_fn=_cmd_diff)
 
     args = parser.parse_args(argv)
     return args._fn(args)

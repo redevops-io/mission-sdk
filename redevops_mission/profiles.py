@@ -50,7 +50,9 @@ class RunResult:
         return "\n".join(lines)
 
 
-def run_program(program, operators, *, approve: bool = False, ledger_path: str | None = None) -> RunResult:
+def drive(program, operators, *, approve: bool = False, ledger_path: str | None = None):
+    """Create + run a mission on the local profile, applying human approvals if `approve`.
+    Returns (runtime, mission_id, mission, approvals_applied) — the raw handle bundle/replay build on."""
     rt = local_runtime(operators, ledger_path=ledger_path)
     mission = rt.create_mission(program.goal, policy_refs=list(program.grants), template=program.name)
     m = rt.run(mission.id)
@@ -63,9 +65,13 @@ def run_program(program, operators, *, approve: bool = False, ledger_path: str |
         for t in tasks:
             m = rt.approve(mission.id, t["node_id"], "approve")
             approvals += 1
+    return rt, mission.id, m, approvals
 
-    pending = [t for t in rt.inbox() if t["mission_id"] == mission.id]
-    timeline = [e["type"] for e in rt.repo.timeline(mission.id)]
+
+def run_program(program, operators, *, approve: bool = False, ledger_path: str | None = None) -> RunResult:
+    rt, mid, m, approvals = drive(program, operators, approve=approve, ledger_path=ledger_path)
+    pending = [t for t in rt.inbox() if t["mission_id"] == mid]
+    timeline = [e["type"] for e in rt.repo.timeline(mid)]
     return RunResult(
         state=m.state.value,
         succeeded=m.state.value == "succeeded",

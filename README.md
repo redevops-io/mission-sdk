@@ -4,10 +4,11 @@ The curated developer boundary over the ReDevOps **Mission Runtime**. You author
 capabilities declaratively, hold **one artifact** — a versioned `MissionProgram` — and operate it
 through this package and the `rdo mission` CLI, **without importing runtime internals**.
 
-> Status: **M1** (design doc §10). Verbs: `validate` · `explain` · `profile` · `simulate` · `run`
-> (on the local single-node profile, zero infra). Proven against two dogfood fixtures — Revenue Rescue
-> (a human-gated saga) and DataOpsBench S21 (a parallel-extract → merge → verify mission).
-> `replay`/`diff`/`verify` land in M2.
+> Status: **M2** (design doc §10). Verbs: `validate` · `explain` · `profile` · `simulate` · `run` ·
+> `bundle` · `replay` · `diff` · `verify`. Proven against three dogfood fixtures — Revenue Rescue (a
+> human-gated saga), DataOpsBench S21 (a parallel-extract → merge → verify mission), and Deploy Release
+> (a net-new gated pipeline). A run exports a portable, self-verifying **case bundle** that `replay`
+> rehydrates to the same terminal state.
 
 ## Install (local development)
 
@@ -65,10 +66,18 @@ rdo mission run      examples/revenue_rescue/mission.py --approve   # execute on
 - **`simulate`** projects cost/success/latency/approvals against the mission budget.
 - **`run`** executes on the **local single-node profile** (in-memory, zero infra). It parks on human
   gates and reports them; `--approve` drives them to completion; `--ledger PATH` persists the event log.
+- **`bundle`** runs the mission and exports a portable, self-verifying **case bundle** (events + outcome
+  + content digest) — `rdo mission bundle <target> --out run.json`.
+- **`replay`** rebuilds a fresh runtime from a bundle's events and confirms it reaches the **same
+  terminal state** (the event log is a faithful, replayable record; tampering is detected) —
+  `rdo mission replay <target> run.json`.
+- **`diff`** reports the structural differences between two bundles — `rdo mission diff a.json b.json`.
+- **`verify`** runs the mission and reports what the runtime recorded: terminal success, ledger
+  integrity, verification stages, and nodes succeeded.
 
-`validate`/`explain`/`profile`/`simulate` never run anything or call a model. See also
-[`examples/dataops_reconcile/mission.py`](examples/dataops_reconcile/mission.py) — DataOpsBench S21 as a
-merge/verify mission.
+`validate`/`explain`/`profile`/`simulate` never run anything or call a model. The three dogfood fixtures
+live under [`examples/`](examples/): `revenue_rescue` (branching saga), `dataops_reconcile` (DataOpsBench
+S21 merge/verify), and `deploy_release` (a net-new gated pipeline).
 
 ## Design
 
