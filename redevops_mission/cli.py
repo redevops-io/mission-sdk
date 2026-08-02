@@ -15,7 +15,9 @@ import sys
 from .api import explain, profile, simulate, validate
 from ._compile import CompileError
 from .bundle import CaseBundle, diff_bundles, diff_text, export_bundle, replay_bundle, verify_bundle
+from .ci import mission_ci
 from .profiles import run_program
+from .scaffold import init_mission
 
 
 def _load_module(path: str):
@@ -108,6 +110,25 @@ def _cmd_diff(args) -> int:
     return 0
 
 
+def _cmd_ci(args) -> int:
+    program, operators = _load_module(args.target)
+    result = mission_ci(program, operators)
+    print(result.to_text())
+    return 0 if result.passed else 1
+
+
+def _cmd_init(args) -> int:
+    try:
+        path = init_mission(args.name, args.dir)
+    except (ValueError, FileExistsError) as e:
+        print(f"init: {e}")
+        return 1
+    print(f"init: wrote {path}\n"
+          f"  next:  rdo mission validate {path}\n"
+          f"         rdo mission run      {path} --approve")
+    return 0
+
+
 def _cmd_verify(args) -> int:
     program, operators = _load_module(args.target)
     report = verify_bundle(export_bundle(program, operators))
@@ -132,6 +153,7 @@ def main(argv: list[str] | None = None) -> int:
         ("simulate", _cmd_simulate, "dry-run projection (no execution, no model calls)"),
         ("run", _cmd_run, "execute on the local single-node profile"),
         ("verify", _cmd_verify, "run + report what the runtime verified (success, integrity, stages)"),
+        ("ci", _cmd_ci, "promotion gate: feasibility · budget · run · regression · replay"),
     ):
         p = verbs.add_parser(verb, help=helptext)
         p.add_argument("target", help=TARGET)
@@ -156,6 +178,11 @@ def main(argv: list[str] | None = None) -> int:
     pd.add_argument("a", help="case bundle JSON")
     pd.add_argument("b", help="case bundle JSON")
     pd.set_defaults(_fn=_cmd_diff)
+
+    pi = verbs.add_parser("init", help="scaffold a runnable starter mission")
+    pi.add_argument("name", help="mission name (a valid Python identifier)")
+    pi.add_argument("--dir", default=".", help="directory to create the mission project in (default: .)")
+    pi.set_defaults(_fn=_cmd_init)
 
     args = parser.parse_args(argv)
     return args._fn(args)

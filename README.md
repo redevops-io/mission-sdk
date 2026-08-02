@@ -4,11 +4,11 @@ The curated developer boundary over the ReDevOps **Mission Runtime**. You author
 capabilities declaratively, hold **one artifact** — a versioned `MissionProgram` — and operate it
 through this package and the `rdo mission` CLI, **without importing runtime internals**.
 
-> Status: **M2** (design doc §10). Verbs: `validate` · `explain` · `profile` · `simulate` · `run` ·
-> `bundle` · `replay` · `diff` · `verify`. Proven against three dogfood fixtures — Revenue Rescue (a
-> human-gated saga), DataOpsBench S21 (a parallel-extract → merge → verify mission), and Deploy Release
-> (a net-new gated pipeline). A run exports a portable, self-verifying **case bundle** that `replay`
-> rehydrates to the same terminal state.
+> Status: **M3** (design doc §10) — the SDK-alpha surface is complete. Verbs: `init` · `validate` ·
+> `explain` · `profile` · `simulate` · `run` · `bundle` · `replay` · `diff` · `verify` · `ci`. Proven
+> against three dogfood fixtures — Revenue Rescue (a human-gated saga), DataOpsBench S21 (a
+> parallel-extract → merge → verify mission), and Deploy Release (a net-new gated pipeline) — plus a
+> freshly `init`-scaffolded mission that passes the full `ci` gate. See [QUICKSTART.md](QUICKSTART.md).
 
 ## Install (local development)
 
@@ -74,6 +74,11 @@ rdo mission run      examples/revenue_rescue/mission.py --approve   # execute on
 - **`diff`** reports the structural differences between two bundles — `rdo mission diff a.json b.json`.
 - **`verify`** runs the mission and reports what the runtime recorded: terminal success, ledger
   integrity, verification stages, and nodes succeeded.
+- **`ci`** is the promotion gate — one pass/fail over five checks (feasibility · budget · run ·
+  regression · replay). This is what a deploy blocks on. Drop
+  [`ci-templates/github-actions.yml`](ci-templates/github-actions.yml) into `.github/workflows/`.
+- **`init`** scaffolds a runnable starter mission — `rdo mission init my_mission` — that validates and
+  gates out of the box, so you edit a working mission rather than a blank file.
 
 `validate`/`explain`/`profile`/`simulate` never run anything or call a model. The three dogfood fixtures
 live under [`examples/`](examples/): `revenue_rescue` (branching saga), `dataops_reconcile` (DataOpsBench

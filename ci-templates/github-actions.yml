@@ -1,0 +1,34 @@
+# Mission CI — validate and gate every mission in a repo on each push.
+# Drop this into .github/workflows/ in a project that builds on the Mission SDK.
+#
+# Note: the SDK depends on the ReDevOps runtime (`agentic_os`). Until it is published, install it
+# from your runtime checkout (editable) or set AGENTIC_OS_SRC — see the SDK README.
+name: mission-ci
+on: [push, pull_request]
+
+jobs:
+  mission-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install the SDK (and the runtime dependency)
+        run: |
+          pip install -e .
+          # pip install -e ../agentic-os-src   # or: export AGENTIC_OS_SRC=...
+
+      - name: Validate + gate every mission
+        run: |
+          for m in examples/*/mission.py; do
+            echo "== $m =="
+            rdo mission validate "$m"
+            rdo mission ci "$m"
+          done
+
+      - name: Tests
+        run: |
+          pip install pytest
+          pytest -q

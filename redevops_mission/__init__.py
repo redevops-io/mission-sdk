@@ -16,8 +16,10 @@ from .authoring import Operator, capability, step, template
 from .bundle import (
     CaseBundle, ReplayResult, VerifyReport, diff_bundles, export_bundle, replay_bundle, verify_bundle,
 )
+from .ci import CIResult, mission_ci
 from .profiles import RunResult, run_program
 from .program import MissionProgram, MissionStep
+from .scaffold import init_mission
 
 __version__ = "0.1.0a0"
 
@@ -26,6 +28,7 @@ __all__ = [
     "MissionProgram", "MissionStep",
     "validate", "explain", "simulate", "profile", "run_program",
     "export_bundle", "replay_bundle", "diff_bundles", "verify_bundle",
+    "mission_ci", "init_mission",
     "ValidateReport", "Explanation", "SimReport", "ProfileReport", "RunResult",
-    "CaseBundle", "ReplayResult", "VerifyReport",
+    "CaseBundle", "ReplayResult", "VerifyReport", "CIResult",
 ]
