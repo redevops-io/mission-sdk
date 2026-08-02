@@ -58,8 +58,11 @@ class MissionProgram:
 
     # ---- authoring ---------------------------------------------------------------------------------
     @classmethod
-    def from_template(cls, template_name: str, *, goal: str, grants: list[str]) -> "MissionProgram":
-        """Lower a registered `@template` into a `MissionProgram` (the internal `ExecutionIntent` stays internal)."""
+    def from_template(cls, template_name: str, *, goal: str, grants: list[str],
+                      source: str = "human:template", origin: dict | None = None) -> "MissionProgram":
+        """Lower a registered `@template` into a `MissionProgram` (the internal `ExecutionIntent` stays
+        internal). `source`/`origin` let a non-human author (e.g. Discovery) reuse a template and still
+        stamp provenance."""
         from .authoring import build_intent
 
         intent = build_intent(template_name, mission_id="draft")
@@ -68,7 +71,27 @@ class MissionProgram:
                         constraints=list(s.constraints), value=s.value_hint)
             for s in intent.steps
         ]
-        return cls(name=template_name, goal=goal, grants=list(grants), steps=steps)
+        return cls(name=template_name, goal=goal, grants=list(grants), steps=steps,
+                   source=source, origin=origin)
+
+    @classmethod
+    def from_discovery(cls, proposal: dict, *, grants: list[str]) -> "MissionProgram":
+        """Compile a **Discovery Runtime proposal** onto the one compilation path (design §13.3). Discovery
+        proposes a `suggested_template` + goal (not steps), so this lowers that template into a
+        `MissionProgram` stamped with the proposal as `origin` — a discovered mission then validates, runs,
+        replays and gates **exactly like a hand-authored one**, resolving the two-`MissionProposal`
+        collision (Discovery no longer needs a bespoke `create_mission` bridge).
+
+        Decoupled by design: it takes the proposal as a **dict**, not the enterprise Discovery type, so the
+        public SDK never depends on the enterprise runtime. Expected keys: `suggested_template` (or
+        `template`), `goal`, and optionally `id`, `opportunity_class`, `hypothesis_id`, `score`, `priority`."""
+        template = proposal.get("suggested_template") or proposal["template"]
+        origin = {"kind": "discovery:proposal", "ref": proposal.get("id", ""),
+                  "opportunity_class": proposal.get("opportunity_class", ""),
+                  "hypothesis_id": proposal.get("hypothesis_id", ""),
+                  "score": proposal.get("score"), "priority": proposal.get("priority", "medium")}
+        return cls.from_template(template, goal=proposal.get("goal", ""), grants=grants,
+                                 source="discovery", origin=origin)
 
     @classmethod
     def from_proposal(cls, proposal: "MissionProposal") -> "MissionProgram":

@@ -34,8 +34,17 @@ class CIResult:
         return "\n".join(lines)
 
 
-def _gate_capabilities(operators) -> list[str]:
-    return [c.name for op in operators for c in op.manifest.capabilities if c.approval_required]
+def _gate_capabilities(operators, program) -> list[str]:
+    """Capability names the runtime will gate — matching the compiler, which gates on EITHER the
+    capability's `approval_required` OR a step constraint mentioning human/review. `ci` must know both,
+    or its `run` check parks on an un-approved gate."""
+    names = {c.name for op in operators for c in op.manifest.capabilities if c.approval_required}
+    provider = {prov: c.name for op in operators for c in op.manifest.capabilities for prov in c.provides}
+    for st in program.steps:
+        if any("human" in x.lower() or "review" in x.lower() for x in st.constraints):
+            if st.outcome in provider:
+                names.add(provider[st.outcome])
+    return sorted(names)
 
 
 def mission_ci(program, operators, *, golden: dict | None = None) -> CIResult:
@@ -49,7 +58,7 @@ def mission_ci(program, operators, *, golden: dict | None = None) -> CIResult:
     register_program_template(program)   # plan from the program's own steps, whatever its source
     report = run_mission_ci(
         factory, goal=program.goal, template=program.name, grants=list(program.grants),
-        approve=_gate_capabilities(operators), golden=golden,
+        approve=_gate_capabilities(operators, program), golden=golden,
     )
     return CIResult(template=report.template, passed=report.passed,
                     checks=[(c.name, c.passed, c.detail) for c in report.checks])

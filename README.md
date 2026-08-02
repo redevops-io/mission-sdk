@@ -89,12 +89,19 @@ merge/verify), `deploy_release` (a net-new gated pipeline), and `from_proposal` 
 
 ## One compilation path
 
-A human template is not the only way to get a `MissionProgram`. A domain compiler (e.g. Quantify) or the
-Discovery Runtime emits a **`MissionProposal`**, and `MissionProgram.from_proposal(...)` compiles it into
-a program that is then **validated, run, replayed and gated identically** — the runtime always plans from
-the program's own steps, so provenance (`program.source`) is the only thing that differs. See
-[`examples/from_proposal/mission.py`](examples/from_proposal/mission.py). This is what lets Discovery
-propose work and a compiler generate missions without a second execution path.
+A human template is not the only way to get a `MissionProgram`. Three sources, one path:
+
+- **human** — `@template` + `MissionProgram.from_template(...)`;
+- **a domain compiler** (e.g. Quantify) — emits a `MissionProposal`, `MissionProgram.from_proposal(...)`
+  (see [`examples/from_proposal/`](examples/from_proposal/mission.py));
+- **the Discovery Runtime** — proposes a `suggested_template` + goal, `MissionProgram.from_discovery(...)`
+  (see [`examples/integrations/discovery_e2e.py`](examples/integrations/discovery_e2e.py) — a real run
+  against the Discovery Runtime).
+
+All three compile to a program that is **validated, run, replayed and gated identically** — the only
+difference is provenance: `program.source` (who authored it) and `program.origin` (the *why* — the
+triggering signal/decision, carried into the case bundle for audit). `from_discovery` takes the proposal
+as a dict, so the public SDK never depends on the enterprise Discovery Runtime.
 
 ## Design
 
