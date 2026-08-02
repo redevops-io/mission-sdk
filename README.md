@@ -4,9 +4,10 @@ The curated developer boundary over the ReDevOps **Mission Runtime**. You author
 capabilities declaratively, hold **one artifact** — a versioned `MissionProgram` — and operate it
 through this package and the `rdo mission` CLI, **without importing runtime internals**.
 
-> Status: **M0** (design doc §10) — the package boundary + the two read-only verbs `validate` and
-> `explain`, proven against the Revenue Rescue fixture. `run`/`replay`/`diff`/`verify`/`profile` and
-> the local adapters land in M1–M2.
+> Status: **M1** (design doc §10). Verbs: `validate` · `explain` · `profile` · `simulate` · `run`
+> (on the local single-node profile, zero infra). Proven against two dogfood fixtures — Revenue Rescue
+> (a human-gated saga) and DataOpsBench S21 (a parallel-extract → merge → verify mission).
+> `replay`/`diff`/`verify` land in M2.
 
 ## Install (local development)
 
@@ -50,12 +51,24 @@ PROGRAM = MissionProgram.from_template("revenue_rescue",
 ```bash
 rdo mission validate examples/revenue_rescue/mission.py   # static + compile checks (no execution)
 rdo mission explain  examples/revenue_rescue/mission.py   # render the compiled physical graph
+rdo mission profile  examples/revenue_rescue/mission.py   # EXPLAIN ANALYZE — topology + projections
+rdo mission simulate examples/revenue_rescue/mission.py   # dry-run cost/latency/approvals/success
+rdo mission run      examples/revenue_rescue/mission.py --approve   # execute on the local profile
 ```
 
-`validate` runs the runtime's deterministic compile — every `need` must bind to a capability that
-`provides` its outcome, the mission's `grants` must cover each capability's permissions (fail-closed),
-and the graph must be acyclic. `explain` renders the lowered graph (dependencies, human gates,
-side-effect/undo tags). Neither runs anything or calls a model.
+- **`validate`** runs the runtime's deterministic compile — every `need` must bind to a capability that
+  `provides` its outcome, the mission's `grants` must cover each capability's permissions (fail-closed),
+  and the graph must be acyclic.
+- **`explain`** renders the lowered graph (dependencies, human gates, side-effect/undo tags).
+- **`profile`** is EXPLAIN ANALYZE: topology (critical-path depth, parallelism, merge points, gate/
+  side-effect/undo coverage) plus projected cost/latency/success — all static, no execution.
+- **`simulate`** projects cost/success/latency/approvals against the mission budget.
+- **`run`** executes on the **local single-node profile** (in-memory, zero infra). It parks on human
+  gates and reports them; `--approve` drives them to completion; `--ledger PATH` persists the event log.
+
+`validate`/`explain`/`profile`/`simulate` never run anything or call a model. See also
+[`examples/dataops_reconcile/mission.py`](examples/dataops_reconcile/mission.py) — DataOpsBench S21 as a
+merge/verify mission.
 
 ## Design
 

@@ -16,13 +16,18 @@ from agentic_os.mission.registry import CapabilityRegistry  # noqa: E402
 from agentic_os.mission.types import ExecutionIntent, IntentStep, Mission  # noqa: E402
 
 
-def compile_program(program, operators):
-    """Return (mission, intent, plan). Raises `CompileError` on an unbindable need, a missing grant,
-    or a cyclic graph — the exact checks `rdo mission validate` reports."""
+def build_registry(operators):
+    """A CapabilityRegistry with every authored operator's manifest registered."""
     registry = CapabilityRegistry()
     for op in operators:
         registry.register(op.manifest)
+    return registry
 
+
+def compile_program(program, operators):
+    """Return (mission, intent, plan, registry). Raises `CompileError` on an unbindable need, a missing
+    grant, or a cyclic graph — the exact checks `rdo mission validate` reports."""
+    registry = build_registry(operators)
     mission = Mission(goal=program.goal, policy_refs=list(program.grants))
     intent = ExecutionIntent(
         mission_id=mission.id,
@@ -34,4 +39,4 @@ def compile_program(program, operators):
         ],
     )
     plan = compile_intent(mission, intent, registry)
-    return mission, intent, plan
+    return mission, intent, plan, registry

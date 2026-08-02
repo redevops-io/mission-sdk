@@ -9,8 +9,11 @@ and the two read-only verbs `validate` and `explain`.
 """
 from __future__ import annotations
 
-from .api import Explanation, ValidateReport, explain, validate
+from .api import (
+    Explanation, ProfileReport, SimReport, ValidateReport, explain, profile, simulate, validate,
+)
 from .authoring import Operator, capability, step, template
+from .profiles import RunResult, run_program
 from .program import MissionProgram, MissionStep
 
 __version__ = "0.1.0a0"
@@ -18,5 +21,6 @@ __version__ = "0.1.0a0"
 __all__ = [
     "template", "step", "capability", "Operator",
     "MissionProgram", "MissionStep",
-    "validate", "explain", "ValidateReport", "Explanation",
+    "validate", "explain", "simulate", "profile", "run_program",
+    "ValidateReport", "Explanation", "SimReport", "ProfileReport", "RunResult",
 ]
