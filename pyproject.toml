@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "redevops-mission"
+version = "0.1.0a0"
+description = "Mission SDK — the developer boundary over the ReDevOps Mission Runtime (author, validate, explain, run, replay a governed MissionProgram)."
+requires-python = ">=3.10"
+readme = "README.md"
+# The one runtime dependency. Pinned to a version once runtime-contracts freezes; for local
+# development the runtime is resolved from a sibling `agentic-os-src` checkout (see _bootstrap.py).
+dependencies = [
+  # "agentic-os==<pinned>",
+]
+
+[project.scripts]
+rdo = "redevops_mission.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["redevops_mission*"]
