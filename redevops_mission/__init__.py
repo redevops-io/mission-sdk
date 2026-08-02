@@ -18,14 +18,14 @@ from .bundle import (
 )
 from .ci import CIResult, mission_ci
 from .profiles import RunResult, run_program
-from .program import MissionProgram, MissionStep
+from .program import MissionProgram, MissionProposal, MissionStep
 from .scaffold import init_mission
 
 __version__ = "0.1.0a0"
 
 __all__ = [
     "template", "step", "capability", "Operator",
-    "MissionProgram", "MissionStep",
+    "MissionProgram", "MissionProposal", "MissionStep",
     "validate", "explain", "simulate", "profile", "run_program",
     "export_bundle", "replay_bundle", "diff_bundles", "verify_bundle",
     "mission_ci", "init_mission",

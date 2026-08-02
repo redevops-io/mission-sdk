@@ -28,11 +28,25 @@ class MissionStep:
 
 
 @dataclass
+class MissionProposal:
+    """A source-agnostic mission description — what a human template, a domain compiler (e.g. Quantify),
+    or the Discovery Runtime emits. It compiles to a `MissionProgram` the *same way regardless of source*
+    (design §13.3: one compilation path), so a proposed mission is validated, run, replayed and gated
+    exactly like a hand-authored one. `source` is provenance, e.g. "discovery", "compiler:quantify"."""
+    name: str
+    goal: str
+    steps: list[MissionStep] = field(default_factory=list)
+    grants: list[str] = field(default_factory=list)
+    source: str = "unknown"
+
+
+@dataclass
 class MissionProgram:
     name: str
     goal: str
     grants: list[str] = field(default_factory=list)
     steps: list[MissionStep] = field(default_factory=list)
+    source: str = "human:template"
     schema_version: str = SCHEMA_VERSION
 
     # ---- authoring ---------------------------------------------------------------------------------
@@ -49,6 +63,14 @@ class MissionProgram:
         ]
         return cls(name=template_name, goal=goal, grants=list(grants), steps=steps)
 
+    @classmethod
+    def from_proposal(cls, proposal: "MissionProposal") -> "MissionProgram":
+        """The single compilation path for a non-human source: a Discovery `MissionProposal` or a domain
+        compiler's output becomes a `MissionProgram`, carrying its provenance. From here it is identical
+        to a hand-authored program — same validate / run / replay / ci."""
+        return cls(name=proposal.name, goal=proposal.goal, grants=list(proposal.grants),
+                   steps=[MissionStep(**{**vars(s)}) for s in proposal.steps], source=proposal.source)
+
     # ---- serialization -----------------------------------------------------------------------------
     def to_dict(self) -> dict:
         return asdict(self)
@@ -61,6 +83,7 @@ class MissionProgram:
         return cls(
             name=d["name"], goal=d.get("goal", ""), grants=list(d.get("grants", [])),
             steps=[MissionStep(**s) for s in d.get("steps", [])],
+            source=d.get("source", "human:template"),
             schema_version=d.get("schema_version", SCHEMA_VERSION),
         )
 

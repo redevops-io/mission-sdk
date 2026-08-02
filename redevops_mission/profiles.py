@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from ._bootstrap import ensure_runtime
-from ._compile import build_registry
+from ._compile import build_registry, register_program_template
 from .adapters import LocalEventLedger
 
 ensure_runtime()
@@ -54,6 +54,7 @@ def drive(program, operators, *, approve: bool = False, ledger_path: str | None 
     """Create + run a mission on the local profile, applying human approvals if `approve`.
     Returns (runtime, mission_id, mission, approvals_applied) — the raw handle bundle/replay build on."""
     rt = local_runtime(operators, ledger_path=ledger_path)
+    register_program_template(program)   # plan from the program's own steps, whatever its source
     mission = rt.create_mission(program.goal, policy_refs=list(program.grants), template=program.name)
     m = rt.run(mission.id)
 

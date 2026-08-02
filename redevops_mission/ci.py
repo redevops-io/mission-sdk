@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from ._bootstrap import ensure_runtime
-from ._compile import build_registry
+from ._compile import build_registry, register_program_template
 
 ensure_runtime()
 
@@ -46,6 +46,7 @@ def mission_ci(program, operators, *, golden: dict | None = None) -> CIResult:
             store=store,
         )
 
+    register_program_template(program)   # plan from the program's own steps, whatever its source
     report = run_mission_ci(
         factory, goal=program.goal, template=program.name, grants=list(program.grants),
         approve=_gate_capabilities(operators), golden=golden,

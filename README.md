@@ -80,9 +80,18 @@ rdo mission run      examples/revenue_rescue/mission.py --approve   # execute on
 - **`init`** scaffolds a runnable starter mission — `rdo mission init my_mission` — that validates and
   gates out of the box, so you edit a working mission rather than a blank file.
 
-`validate`/`explain`/`profile`/`simulate` never run anything or call a model. The three dogfood fixtures
-live under [`examples/`](examples/): `revenue_rescue` (branching saga), `dataops_reconcile` (DataOpsBench
-S21 merge/verify), and `deploy_release` (a net-new gated pipeline).
+`validate`/`explain`/`profile`/`simulate` never run anything or call a model. The dogfood fixtures live
+under [`examples/`](examples/): `revenue_rescue` (branching saga), `dataops_reconcile` (DataOpsBench S21
+merge/verify), `deploy_release` (a net-new gated pipeline), and `from_proposal` (below).
+
+## One compilation path
+
+A human template is not the only way to get a `MissionProgram`. A domain compiler (e.g. Quantify) or the
+Discovery Runtime emits a **`MissionProposal`**, and `MissionProgram.from_proposal(...)` compiles it into
+a program that is then **validated, run, replayed and gated identically** — the runtime always plans from
+the program's own steps, so provenance (`program.source`) is the only thing that differs. See
+[`examples/from_proposal/mission.py`](examples/from_proposal/mission.py). This is what lets Discovery
+propose work and a compiler generate missions without a second execution path.
 
 ## Design
 

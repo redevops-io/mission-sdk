@@ -24,13 +24,9 @@ def build_registry(operators):
     return registry
 
 
-def compile_program(program, operators):
-    """Return (mission, intent, plan, registry). Raises `CompileError` on an unbindable need, a missing
-    grant, or a cyclic graph — the exact checks `rdo mission validate` reports."""
-    registry = build_registry(operators)
-    mission = Mission(goal=program.goal, policy_refs=list(program.grants))
-    intent = ExecutionIntent(
-        mission_id=mission.id,
+def build_intent_from_program(program, mission_id: str) -> ExecutionIntent:
+    return ExecutionIntent(
+        mission_id=mission_id,
         rationale=f"{program.name} program",
         steps=[
             IntentStep(outcome=s.outcome, need=s.need, inputs_from=list(s.after),
@@ -38,5 +34,26 @@ def compile_program(program, operators):
             for s in program.steps
         ],
     )
+
+
+def register_program_template(program) -> None:
+    """Register the program's steps as the runtime template it plans from, so a `MissionProgram` runs
+    regardless of whether a `@template` was declared. This is what makes the compilation path the same
+    for a hand-authored mission and a `from_proposal` one (Discovery / a domain compiler): the runtime
+    always plans from the program's own steps."""
+    from agentic_os.mission.templates import TEMPLATES
+
+    def factory(mission_id, _program=program):
+        return build_intent_from_program(_program, mission_id)
+
+    TEMPLATES[program.name] = factory
+
+
+def compile_program(program, operators):
+    """Return (mission, intent, plan, registry). Raises `CompileError` on an unbindable need, a missing
+    grant, or a cyclic graph — the exact checks `rdo mission validate` reports."""
+    registry = build_registry(operators)
+    mission = Mission(goal=program.goal, policy_refs=list(program.grants))
+    intent = build_intent_from_program(program, mission.id)
     plan = compile_intent(mission, intent, registry)
     return mission, intent, plan, registry
