@@ -13,8 +13,9 @@ readme = "README.md"
 # — running the SDK against it still carries the runtime's AGPL for a served combined work.
 license = "Apache-2.0"
 license-files = ["LICENSE"]
+# NOTE: with the PEP 639 SPDX `license` field above, a `License ::` classifier is forbidden
+# (setuptools>=77 raises InvalidConfigError). Keep only non-license classifiers here.
 classifiers = [
-  "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
   "Development Status :: 3 - Alpha",
 ]
