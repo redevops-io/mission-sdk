@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,11 +8,22 @@ version = "0.1.0a0"
 description = "Mission SDK — the developer boundary over the ReDevOps Mission Runtime (author, validate, explain, run, replay a governed MissionProgram)."
 requires-python = ">=3.10"
 readme = "README.md"
+# Permissive by design: the SDK is the developer boundary + compatibility target, so it is Apache-2.0
+# (build against it freely; implement conforming runtimes). The reference runtime `agentic-os` is AGPL-3.0
+# — running the SDK against it still carries the runtime's AGPL for a served combined work.
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+classifiers = [
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Development Status :: 3 - Alpha",
+]
 # The one runtime dependency. Parity checked against the SDK's actual import surface (see PARITY.md):
-# public `agentic-os` satisfies the SDK contract exactly. It is untagged, so alpha pins the commit;
-# switch to `agentic-os==0.1.0aN` once a release is tagged. `AGENTIC_OS_SRC` is a dev-only override.
+# the public `agentic-os` runtime satisfies the SDK contract exactly. Pinned to the current `main` commit
+# (public is untagged); switch to `agentic-os==0.1.0aN` once a release is tagged. `AGENTIC_OS_SRC` is a
+# dev-only override.
 dependencies = [
-  "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@d261825fe18acb7f93a958b88cc59695fa97c11a",
+  "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@b43d11c3b5afb97a632d4a144792c94d793846e6",
 ]
 
 [project.scripts]

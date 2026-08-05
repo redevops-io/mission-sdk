@@ -108,3 +108,12 @@ as a dict, so the public SDK never depends on the enterprise Discovery Runtime.
 The full design (the boundary, the `MissionProgram`-only public artifact, the `rdo mission` verbs
 including `profile`, the adapter SPIs, and the M0→M3 plan) is in
 `ReDevOps_Mission_SDK_and_DevOps_Design.md`.
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE). The Mission SDK is the developer boundary and compatibility target,
+so it is permissively licensed: build applications against it freely, and implement conforming runtimes.
+The reference runtime it depends on, [`agentic-os`](https://github.com/redevops-io/agentic-os), is
+separately licensed under **AGPL-3.0** — running the SDK against it carries the runtime's AGPL for a served
+combined work. To use the reference runtime without AGPL obligations, contact ReDevOps for a commercial
+license.

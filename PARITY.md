@@ -4,8 +4,14 @@
 satisfy the Mission SDK's public dependency contract?" Checked against the SDK's *actual* import surface
 only.
 
-**Checkouts:** public `redevops-io/agentic-os` @ `d261825` (v0.1.0, untagged) vs the development runtime
-`agentic-os-src` = `redevops-io/agentic-os-enterprise` @ `a51d279` (v0.1.0).
+**Checkouts:** public `redevops-io/agentic-os` @ `b43d11c` (`main`, **post open-core migration** — the
+versioned public contracts `merge/v9` · `execution-plan/v8` · `runtime-event/v10` · `control-plane/v9` ·
+`topology/v8` · `evaluation/v10` · `overlays/v8` are all merged) vs the development runtime
+`redevops-io/agentic-os-enterprise` (post namespace-split, which now **references** this public core).
+
+**Licensing:** the SDK is **Apache-2.0** (permissive — the developer boundary + compatibility target);
+the reference runtime `agentic-os` is **AGPL-3.0** (running the SDK against it carries the runtime's AGPL
+for a served combined work).
 
 ## The SDK's actual dependency surface
 
@@ -26,9 +32,10 @@ only.
 | `mission.executor` → `Executor` | ✅ | identical | ✅ |
 
 **Transitive closure:** importing these pulls in `planner`, `verify`, `context`, `scheduler`, … but
-**not `events`** — `agentic_os.mission.events` (the v10 RuntimeEvent `MissionCaseBundle`) is absent from
-public, and the SDK never needs it (bundles are built over the operational `EventStore`). Proof: the full
-suite runs on public, which has no `events.py`.
+**not `events`**. As of the open-core migration `agentic_os.mission.events` (the v10 `RuntimeEvent` family,
+`runtime-event/v10`) is **now public**, but it stays **outside the SDK's surface** — the SDK builds case
+bundles over the operational `EventStore`, not the event vocabulary. The 11-module import surface above is
+unchanged by the migration; every module the SDK touches is public and satisfies the contract.
 
 **`runtime-contracts`:** not in the SDK's surface — the SDK uses `agentic_os.mission` types directly, so
 there is nothing to pin there yet.
@@ -38,7 +45,7 @@ enterprise parameters the SDK does not pass. Nothing the SDK depends on is missi
 
 ## Behavioral gates — all five dogfood shapes on the PUBLIC runtime
 
-`PYTHONPATH=<public agentic-os>` — full test suite **25 passed**, and every verb ran on every shape:
+`PYTHONPATH=<public agentic-os @ b43d11c>` — full test suite **28 passed**, and every verb ran on every shape:
 
 | shape | validate | explain | profile | simulate | run | bundle | replay | verify | ci |
 |---|---|---|---|---|---|---|---|---|---|
@@ -58,15 +65,18 @@ step definitions and re-registering on replay. Now consistent cross-process unde
 
 ## Verdict & pinning decision
 
-**Exact behavioral parity** for the SDK's contract — public satisfies it fully. But there is a **release
-gap**: public is untagged and both checkouts report `0.1.0`, so `agentic-os==0.1.0` is ambiguous.
+**Exact behavioral parity** for the SDK's contract — the public runtime satisfies it fully, and now the
+contracts the SDK rides on are **versioned and public** (`execution-plan/v8`, `runtime-event/v10`, …). The
+only remaining gap is a **release tag**: public is untagged and reports `0.1.0`, so `agentic-os==0.1.0` is
+ambiguous.
 
-For alpha the SDK therefore pins the **public commit**:
+For alpha the SDK therefore pins the current **public `main` commit**:
 
 ```
-agentic-os @ git+https://github.com/redevops-io/agentic-os.git@d261825
+agentic-os @ git+https://github.com/redevops-io/agentic-os.git@b43d11c
 ```
 
-This is reproducible and honest. **Next step to reach a clean version pin:** cut a tagged release of
-`agentic-os` (e.g. `v0.1.0-alpha` at this commit); the SDK then pins `agentic-os==0.1.0a…`. `_bootstrap`
-is now a **loud, opt-in dev fallback** (only via `AGENTIC_OS_SRC`), never a silent compatibility layer.
+This is reproducible and honest. **Next step to a clean version pin:** cut a tagged release of `agentic-os`
+(e.g. `v0.1.0-alpha` at this commit); the SDK then pins `agentic-os==0.1.0a…`, and can begin pinning the
+`runtime-contracts` versions directly once its surface consumes them. `_bootstrap` is a **loud, opt-in dev
+fallback** (only via `AGENTIC_OS_SRC`), never a silent compatibility layer.
