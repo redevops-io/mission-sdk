@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "redevops-mission"
-version = "0.1.0a0"
+version = "0.2.0a0"
 description = "Mission SDK — the developer boundary over the ReDevOps Mission Runtime (author, validate, explain, run, replay a governed MissionProgram)."
 requires-python = ">=3.10"
 readme = "README.md"
