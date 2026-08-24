@@ -103,6 +103,12 @@ difference is provenance: `program.source` (who authored it) and `program.origin
 triggering signal/decision, carried into the case bundle for audit). `from_discovery` takes the proposal
 as a dict, so the public SDK never depends on the enterprise Discovery Runtime.
 
+## Architecture
+
+The ReDevOps runtimes use a **functional-core / imperative-shell** design: canonical artifacts and
+deterministic transformations stay value-oriented and side-effect free, while runtime actors, stores,
+and providers sit behind explicit interfaces. See [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Design
 
 The full design (the boundary, the `MissionProgram`-only public artifact, the `rdo mission` verbs
