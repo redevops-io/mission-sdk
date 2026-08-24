@@ -18,12 +18,42 @@ from agentic_os.mission.operator_sdk import LocalOperatorClient  # noqa: E402
 from agentic_os.mission.runtime import MissionRuntime  # noqa: E402
 
 
-def local_runtime(operators, *, ledger_path: str | None = None):
-    """A single-JVM-equivalent in-process runtime: registry + local operator client + event ledger."""
+def local_runtime(operators, *, ledger_path: str | None = None, secure: bool = False,
+                  sandbox=None, authority=None):
+    """A single-JVM-equivalent in-process runtime: registry + local operator client + event ledger.
+
+    With ``secure=True`` the v0.3.x runtime security seams are wired from the authored capabilities'
+    declared surface (``required_authority`` / ``isolation_class`` / ``network`` / ``data_classifications``):
+      * a boundary ``SecurityMonitor`` emits telemetry the author never has to report (not agent-reported);
+      * ``isolation_for`` routes an isolation-declaring capability through ``sandbox`` — and FAILS CLOSED
+        if one declares isolation but no ``sandbox`` is wired (real confinement is the enterprise plane);
+      * ``authority``, when given, enables the delegated-authority gate (a capability whose
+        ``required_authority`` exceeds the leased chain is refused before its side effect).
+    All opt-in: ``secure=False`` (the default) builds exactly the runtime as before."""
     registry = build_registry(operators)
     client = LocalOperatorClient({op.name: op for op in operators})
     store = LocalEventLedger(ledger_path).store()
-    return MissionRuntime(registry, Executor(client), store=store)
+    monitor = None
+    ex_kwargs: dict = {}
+    if secure:
+        from agentic_os.mission.security_monitor import SecurityMonitor  # noqa: PLC0415 — opt-in
+        monitor = SecurityMonitor(descriptor_for=registry.get)
+
+        def isolation_for(node):
+            spec = registry.get(node.capability)
+            return (getattr(spec, "isolation_class", "") or "") if spec else ""
+
+        def authority_for(node):
+            spec = registry.get(node.capability)
+            return tuple(getattr(spec, "required_authority", ()) or ()) if spec else ()
+
+        ex_kwargs = {"sandbox": sandbox, "isolation_for": isolation_for, "monitor": monitor}
+        if authority is not None:
+            ex_kwargs["authority"] = authority
+            ex_kwargs["authority_for"] = authority_for
+    runtime = MissionRuntime(registry, Executor(client, **ex_kwargs), store=store)
+    runtime.security_monitor = monitor   # surfaced to run_program for the disposition/containment/spans
+    return runtime
 
 
 @dataclass
@@ -35,6 +65,11 @@ class RunResult:
     nodes_succeeded: int = 0
     approvals_applied: int = 0
     timeline: list[str] = field(default_factory=list)
+    # ── security / telemetry (populated only on a `secure=True` run) ──
+    disposition: str | None = None              # ALLOW | REQUIRE_REVIEW | NO_OVERRIDE | DENY
+    containment: str | None = None              # RUNNING | CONTAINING | CONTAINED | REVIEW_REQUIRED | RECOVERED
+    security_reasons: list[str] = field(default_factory=list)
+    spans: list[dict] = field(default_factory=list)   # Mission-native trace tree (OTel-shaped)
 
     def to_text(self) -> str:
         lines = [f"run: {self.state.upper()}"
@@ -47,13 +82,23 @@ class RunResult:
         if self.outcome and self.outcome.get("world"):
             for outcome, val in self.outcome["world"].items():
                 lines.append(f"  ✓ {outcome}: {val}")
+        if self.disposition is not None:
+            mark = {"ALLOW": "✓", "REQUIRE_REVIEW": "⚠", "NO_OVERRIDE": "⛔", "DENY": "✗"}.get(self.disposition, "·")
+            lines.append(f"  security: {mark} {self.disposition}"
+                         + (f" · containment {self.containment}" if self.containment
+                            and self.containment != "RUNNING" else "")
+                         + (f" · {len(self.spans)} span(s)" if self.spans else ""))
+            for r in self.security_reasons:
+                lines.append(f"    — {r}")
         return "\n".join(lines)
 
 
-def drive(program, operators, *, approve: bool = False, ledger_path: str | None = None):
+def drive(program, operators, *, approve: bool = False, ledger_path: str | None = None,
+          secure: bool = False, sandbox=None, authority=None):
     """Create + run a mission on the local profile, applying human approvals if `approve`.
-    Returns (runtime, mission_id, mission, approvals_applied) — the raw handle bundle/replay build on."""
-    rt = local_runtime(operators, ledger_path=ledger_path)
+    Returns (runtime, mission_id, mission, approvals_applied) — the raw handle bundle/replay build on.
+    `secure`/`sandbox`/`authority` opt into the v0.3.x runtime security seams (see `local_runtime`)."""
+    rt = local_runtime(operators, ledger_path=ledger_path, secure=secure, sandbox=sandbox, authority=authority)
     register_program_template(program)   # plan from the program's own steps, whatever its source
     mission = rt.create_mission(program.goal, policy_refs=list(program.grants), template=program.name)
     m = rt.run(mission.id)
@@ -69,11 +114,13 @@ def drive(program, operators, *, approve: bool = False, ledger_path: str | None 
     return rt, mission.id, m, approvals
 
 
-def run_program(program, operators, *, approve: bool = False, ledger_path: str | None = None) -> RunResult:
-    rt, mid, m, approvals = drive(program, operators, approve=approve, ledger_path=ledger_path)
+def run_program(program, operators, *, approve: bool = False, ledger_path: str | None = None,
+                secure: bool = False, sandbox=None, authority=None) -> RunResult:
+    rt, mid, m, approvals = drive(program, operators, approve=approve, ledger_path=ledger_path,
+                                  secure=secure, sandbox=sandbox, authority=authority)
     pending = [t for t in rt.inbox() if t["mission_id"] == mid]
     timeline = [e["type"] for e in rt.repo.timeline(mid)]
-    return RunResult(
+    result = RunResult(
         state=m.state.value,
         succeeded=m.state.value == "succeeded",
         outcome=m.outcome,
@@ -82,3 +129,14 @@ def run_program(program, operators, *, approve: bool = False, ledger_path: str |
         approvals_applied=approvals,
         timeline=timeline,
     )
+    # Fold in the security assessment: correlate the boundary telemetry into a disposition, drive
+    # containment, and surface the Mission-native trace tree. Only when a secure run produced events.
+    monitor = getattr(rt, "security_monitor", None)
+    if monitor is not None and getattr(monitor.trajectory, "events", None):
+        disposition, reasons, cstate = monitor.enforce()
+        result.disposition = disposition.value
+        result.containment = cstate.value
+        result.security_reasons = list(reasons)
+        from agentic_os.mission.tracing import MissionTrace  # noqa: PLC0415 — opt-in
+        result.spans = MissionTrace(mid).spans(monitor.trajectory)
+    return result

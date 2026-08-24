@@ -73,7 +73,8 @@ def _cmd_profile(args) -> int:
 
 def _cmd_run(args) -> int:
     program, operators = _load_module(args.target)
-    result = run_program(program, operators, approve=args.approve, ledger_path=args.ledger)
+    result = run_program(program, operators, approve=args.approve, ledger_path=args.ledger,
+                         secure=getattr(args, "secure", False))
     print(result.to_text())
     if result.succeeded:
         return 0
@@ -162,6 +163,9 @@ def main(argv: list[str] | None = None) -> int:
                            help="auto-approve human gates and drive to completion")
             p.add_argument("--ledger", metavar="PATH", default=None,
                            help="persist the event ledger to an append-only file (default: in-memory)")
+            p.add_argument("--secure", action="store_true",
+                           help="wire the v0.3.x runtime security plane (boundary telemetry → trajectory "
+                                "→ disposition/containment) from the capabilities' declared surface")
         p.set_defaults(_fn=fn)
 
     pb = verbs.add_parser("bundle", help="run + export a portable, self-verifying case bundle")

@@ -24,7 +24,7 @@ classifiers = [
 # (public is untagged); switch to `agentic-os==0.1.0aN` once a release is tagged. `AGENTIC_OS_SRC` is a
 # dev-only override.
 dependencies = [
-  "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@b43d11c3b5afb97a632d4a144792c94d793846e6",
+  "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@63c0b255cb9f6b3c64ca9c62791e65975963ef56",
 ]
 
 [project.scripts]
