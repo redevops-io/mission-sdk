@@ -137,9 +137,62 @@ def _cmd_verify(args) -> int:
     return 0 if report.succeeded and report.integrity_ok else 1
 
 
+def _cmd_doctor(args) -> int:
+    """Environment diagnostic: versions + whether a basic mission actually executes. Prints a checklist and
+    returns 0 iff every check passes — the fastest way for a human or coding agent to confirm the install."""
+    import platform
+
+    rows: list[tuple[str, str, bool]] = []
+
+    from . import __version__ as sdk_ver
+    rows.append(("mission-sdk", sdk_ver, True))
+    py = platform.python_version()
+    rows.append(("python", py, sys.version_info[:2] >= (3, 10)))
+
+    runtime_ok = False
+    try:
+        import agentic_os  # noqa: PLC0415
+        rows.append(("agentic-os", getattr(agentic_os, "__version__", "installed"), True))
+        runtime_ok = True
+    except Exception as e:  # noqa: BLE001
+        rows.append(("agentic-os", f"NOT importable ({type(e).__name__})", False))
+
+    mission_ok = False
+    if runtime_ok:
+        try:
+            from .authoring import Operator, capability, step, template  # noqa: PLC0415,F401
+            from .profiles import run_program  # noqa: PLC0415
+            from .program import MissionProgram  # noqa: PLC0415
+
+            @template("doctor_check")
+            def _doctor_check(mission_id):
+                return [step("ok", need="confirm the runtime executes a minimal mission")]
+
+            ops = [Operator("doctor", [capability("doctor.ok", handler=lambda i: {"ok": True},
+                                                  provides=["ok"])])]
+            prog = MissionProgram.from_template("doctor_check", goal="self-check", grants=[])
+            mission_ok = run_program(prog, ops).succeeded
+        except Exception as e:  # noqa: BLE001
+            rows.append(("minimal mission", f"FAILED ({type(e).__name__})", False))
+    rows.append(("minimal mission", "runs" if mission_ok else "not run", mission_ok))
+
+    print("ReDevOps Mission SDK — doctor\n")
+    ok_all = True
+    for name, value, ok in rows:
+        ok_all = ok_all and ok
+        print(f"  {name:<18} {value:<28} {'OK' if ok else 'FAIL'}")
+    print("\n" + ("All checks passed — the SDK is ready." if ok_all else
+                  "Some checks failed. If agentic-os is not importable, run `pip install -e .` (or set "
+                  "AGENTIC_OS_SRC to a runtime checkout for development)."))
+    return 0 if ok_all else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="rdo", description="ReDevOps developer CLI")
     groups = parser.add_subparsers(dest="group", required=True)
+
+    doctor = groups.add_parser("doctor", help="check the environment: versions + a live minimal-mission run")
+    doctor.set_defaults(_fn=_cmd_doctor)
 
     mission = groups.add_parser("mission", help="author, inspect, and operate missions")
     verbs = mission.add_subparsers(dest="verb", required=True)
