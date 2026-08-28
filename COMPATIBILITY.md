@@ -36,14 +36,16 @@ minimal mission    runs      OK
 
 ## Optional extras
 
+From a clone (the package is not yet on PyPI — see the [README](README.md#install)):
+
 ```bash
-pip install "redevops-mission[langgraph]"   # LangGraph integration deps
-pip install "redevops-mission[langchain]"   # LangChain integration deps
-pip install "redevops-mission[telemetry]"   # telemetry bridges
-pip install "redevops-mission[full]"        # everything above
+pip install -e ".[langgraph]"   # LangGraph integration deps
+pip install -e ".[langchain]"   # LangChain integration deps
+pip install -e ".[telemetry]"   # telemetry bridges
+pip install -e ".[full]"        # everything above
 ```
 
-The default `pip install redevops-mission` needs **no provider key and no extra** to run
+The default `pip install -e .` needs **no provider key and no extra** to run
 `examples/00_minimal/main.py`.
 
 ## Release discipline

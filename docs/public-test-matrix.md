@@ -33,7 +33,10 @@ through the SDK:
   surfaces the optimizer).
 - `test_cross_tenant_plan_cache_is_isolated` — the security regression that one tenant's authorized plan is
   never served to another (owned by `context-runtime`; already enforced there, mirrored here when surfaced).
-- `test_provider_swap_preserves_mission_semantics` — same mission under two provider adapters.
+- `test_provider_swap_preserves_mission_semantics` — the same mission runs unchanged under two different
+  provider adapters. This is the highest-value guarantee still to surface for an Agent Automation evaluator:
+  it demonstrates that ReDevOps is *infrastructure beneath* agents and providers, not a framework tied to one
+  stack. Prioritized for the next SDK release.
 
 Until surfaced through `redevops_mission`, these guarantees live in their owning repos (see
 [repo-map.md](repo-map.md)); this matrix links out rather than duplicating them.

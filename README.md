@@ -1,15 +1,17 @@
 # Mission SDK — the ReDevOps Runtime front door
 
-**ReDevOps Runtime is a production runtime layer for AI applications: planning, context, governed execution,
-verification, replay, governance, and runtime optimization.** The Mission SDK (`redevops-mission`) is its
-application-facing front door.
+**The Mission SDK adds governed planning, execution, verification, and replay to your existing AI agents —
+without replacing their framework.** Wrap a LangGraph, LangChain, or custom agent capability and run it as an
+auditable, replayable mission. It is the application-facing front door to the ReDevOps Runtime, and integrates
+with the stack's broader context/runtime capabilities (provider selection, optimization, discovery) as you
+opt into them.
 
 > **Works with your existing LangGraph, LangChain, custom agents, tools, models, and infrastructure.**
 > Keep your agent framework. Stop rebuilding the production runtime around every app.
 
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
-![package](https://img.shields.io/badge/pip-redevops--mission-informational)
-![license](https://img.shields.io/badge/license-AGPL--3.0-green)
+![package](https://img.shields.io/badge/package-redevops--mission-informational)
+![license](https://img.shields.io/badge/license-Apache--2.0-green)
 ![status](https://img.shields.io/badge/status-alpha%20(M3)-orange)
 
 **[Quickstart](QUICKSTART.md) · [Architecture](ARCHITECTURE.md) · [Examples](examples/) · [For coding agents](AGENTS.md)**
@@ -20,12 +22,16 @@ workflow engine, or LLM framework.
 ## Install
 
 ```bash
-pip install redevops-mission          # the SDK + its pinned agentic-os runtime; exposes the `rdo` command
+git clone https://github.com/redevops-io/mission-sdk
+cd mission-sdk
+pip install -e .          # resolves the pinned agentic-os runtime; exposes the `rdo` command
+rdo doctor               # versions + a live minimal-mission run — confirms the environment
 ```
 
-From a clone (until the package is on your index): `pip install -e .`. Optional adoption extras:
-`redevops-mission[langgraph]`, `[langchain]`, `[telemetry]`, `[full]`. The default install needs **no
-provider key and no network** to run the minimal example. Check the environment any time with `rdo doctor`.
+> Not yet on PyPI. Once published, the one-liner will be `pip install redevops-mission`.
+
+Optional adoption extras: `pip install -e ".[langgraph]"`, `".[langchain]"`, `".[telemetry]"`, `".[full]"`.
+The default install needs **no provider key and no network** to run the minimal example below.
 
 ## Minimal working example
 
