@@ -27,6 +27,13 @@ dependencies = [
   "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@63c0b255cb9f6b3c64ca9c62791e65975963ef56",
 ]
 
+# Optional adoption extras. The default install needs none of these to run examples/00_minimal.
+[project.optional-dependencies]
+langgraph = ["langgraph>=0.2"]
+langchain = ["langchain>=0.2"]
+telemetry = ["opentelemetry-sdk>=1.20"]
+full = ["langgraph>=0.2", "langchain>=0.2", "opentelemetry-sdk>=1.20"]
+
 [project.scripts]
 rdo = "redevops_mission.cli:main"
 

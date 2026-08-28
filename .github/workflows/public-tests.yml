@@ -1,0 +1,75 @@
+# Public guarantee tests for the Mission SDK front door.
+#
+# Each job is named for a user-facing guarantee (not an internal module), so an external evaluator can read
+# the guarantees straight from the CI status. The whole file runs on push/PR and can be re-run by anyone who
+# forks the repo. The runtime dependency (`agentic-os`) is resolved by `pip install` from the pin in
+# pyproject.toml; a development checkout can be substituted with AGENTIC_OS_SRC (see the README).
+name: public-tests
+on: [push, pull_request]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  install:                       # guarantee: a clean environment installs the SDK + runtime and exposes `rdo`
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e .
+      - run: rdo doctor          # versions + a live minimal-mission run; exits non-zero if anything is off
+
+  quickstart:                    # guarantee: the documented Quickstart commands actually work
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e .
+      - run: |
+          rdo mission init demo_mission
+          rdo mission validate demo_mission/mission.py
+          rdo mission explain  demo_mission/mission.py
+          rdo mission simulate demo_mission/mission.py
+
+  examples:                      # guarantee: the front-door examples run offline, with no provider key
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e .
+      - run: python examples/00_minimal/main.py
+      - run: python examples/01_existing_agent/main.py
+
+  replay:                        # guarantee: a sealed run replays and self-verifies without re-execution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e .
+      - run: |
+          rdo mission bundle examples/revenue_rescue/mission.py --out /tmp/run.json
+          rdo mission replay examples/revenue_rescue/mission.py /tmp/run.json
+
+  adoption-tests:                # guarantee: the public adoption guarantees hold (grouped by outcome, not module)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e . pytest
+      - run: python -m pytest tests/adoption -q
+
+  package:                       # guarantee: the distribution builds and its metadata is well-formed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install build twine
+      - run: python -m build
+      - run: python -m twine check dist/*

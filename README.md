@@ -1,125 +1,128 @@
-# redevops-mission — the Mission SDK
+# Mission SDK — the ReDevOps Runtime front door
 
-The curated developer boundary over the ReDevOps **Mission Runtime**. You author a mission and its
-capabilities declaratively, hold **one artifact** — a versioned `MissionProgram` — and operate it
-through this package and the `rdo mission` CLI, **without importing runtime internals**.
+**ReDevOps Runtime is a production runtime layer for AI applications: planning, context, governed execution,
+verification, replay, governance, and runtime optimization.** The Mission SDK (`redevops-mission`) is its
+application-facing front door.
 
-> Status: **M3** (design doc §10) — the SDK-alpha surface is complete. Verbs: `init` · `validate` ·
-> `explain` · `profile` · `simulate` · `run` · `bundle` · `replay` · `diff` · `verify` · `ci`. Proven
-> against three dogfood fixtures — Revenue Rescue (a human-gated saga), DataOpsBench S21 (a
-> parallel-extract → merge → verify mission), and Deploy Release (a net-new gated pipeline) — plus a
-> freshly `init`-scaffolded mission that passes the full `ci` gate. See [QUICKSTART.md](QUICKSTART.md).
+> **Works with your existing LangGraph, LangChain, custom agents, tools, models, and infrastructure.**
+> Keep your agent framework. Stop rebuilding the production runtime around every app.
 
-## Install (local development)
+![python](https://img.shields.io/badge/python-3.10%2B-blue)
+![package](https://img.shields.io/badge/pip-redevops--mission-informational)
+![license](https://img.shields.io/badge/license-AGPL--3.0-green)
+![status](https://img.shields.io/badge/status-alpha%20(M3)-orange)
 
-The SDK depends on the ReDevOps runtime, **pinned to the public `agentic-os`** (parity-checked against
-the SDK's actual contract — see [PARITY.md](PARITY.md)):
+**[Quickstart](QUICKSTART.md) · [Architecture](ARCHITECTURE.md) · [Examples](examples/) · [For coding agents](AGENTS.md)**
+
+Category: **Agent Automation / Agent Runtime Infrastructure** — *not* a vector database, RAG library, generic
+workflow engine, or LLM framework.
+
+## Install
 
 ```bash
-pip install -e .        # resolves the pinned `agentic-os` from git; exposes the `rdo` command
+pip install redevops-mission          # the SDK + its pinned agentic-os runtime; exposes the `rdo` command
 ```
 
-For development against a local runtime checkout, set `AGENTIC_OS_SRC` — a **loud, opt-in** override, so
-the SDK is never silently satisfied by an unknown checkout (unset ⇒ a clear ImportError).
+From a clone (until the package is on your index): `pip install -e .`. Optional adoption extras:
+`redevops-mission[langgraph]`, `[langchain]`, `[telemetry]`, `[full]`. The default install needs **no
+provider key and no network** to run the minimal example. Check the environment any time with `rdo doctor`.
 
-## Author a mission
-
-A mission is a set of **steps** (each an `outcome` to produce, the `need` it satisfies, and its
-dependencies) plus the **capabilities** that provide those outcomes. Everything is authored through
-`redevops_mission` — see [`examples/revenue_rescue/mission.py`](examples/revenue_rescue/mission.py):
+## Minimal working example
 
 ```python
-from redevops_mission import MissionProgram, Operator, capability, step, template
+from redevops_mission import (
+    MissionProgram, Operator, capability, step, template, run_program, explain, export_bundle, replay_bundle,
+)
 
-@template("revenue_rescue")
-def revenue_rescue(mission_id):
-    return [
-        step("dunning_attempted", need="chase the overdue invoice…",
-             constraints=["money-moving — requires human approval"]),
-        step("reply_drafted", need="proactively reach out…", after=["dunning_attempted"]),
-        ...
-    ]
+@template("hello_mission")                        # 1. outcomes + their dependency shape
+def hello_mission(mission_id):
+    return [step("greeting_ready", need="produce a greeting for the user")]
 
-OPERATORS = [Operator("agentic-billing", [
-    capability("billing.dunning", handler=..., provides=["dunning_attempted"],
-               side_effecting=True, approval_required=True, permissions=["billing:write"]),
-]), ...]
+OPERATORS = [Operator("greeter", [                # 2. capabilities that provide them (wrap YOUR logic)
+    capability("greet.hello", handler=lambda inputs: {"greeting": "hello from the runtime"},
+               provides=["greeting_ready"]),
+])]
 
-PROGRAM = MissionProgram.from_template("revenue_rescue",
-                                       goal="Recover a failed customer payment",
-                                       grants=["billing:write", ...])
+PROGRAM = MissionProgram.from_template("hello_mission", goal="Greet the user", grants=[])  # 3. one artifact
+
+result = run_program(PROGRAM, OPERATORS)          # execute
+exp    = explain(PROGRAM, OPERATORS)              # why this plan
+replay = replay_bundle(export_bundle(PROGRAM, OPERATORS), OPERATORS)   # reproduce the sealed run
+print(result.succeeded, replay.consistent)        # -> True True
 ```
 
-## Operate it
+Runnable, offline, and CI-tested at [`examples/00_minimal/main.py`](examples/00_minimal/main.py):
 
 ```bash
-rdo mission validate examples/revenue_rescue/mission.py   # static + compile checks (no execution)
-rdo mission explain  examples/revenue_rescue/mission.py   # render the compiled physical graph
-rdo mission profile  examples/revenue_rescue/mission.py   # EXPLAIN ANALYZE — topology + projections
-rdo mission simulate examples/revenue_rescue/mission.py   # dry-run cost/latency/approvals/success
-rdo mission run      examples/revenue_rescue/mission.py --approve   # execute on the local profile
+python examples/00_minimal/main.py
+# run     : state=succeeded succeeded=True nodes=1
+# explain : goal='Greet the user', 1 node(s), first=greet.hello -> greeting_ready
+# replay  : recorded=succeeded replayed=succeeded consistent=True integrity_ok=True
+# OK — mission executed, explained, replayed, and verified.
 ```
 
-- **`validate`** runs the runtime's deterministic compile — every `need` must bind to a capability that
-  `provides` its outcome, the mission's `grants` must cover each capability's permissions (fail-closed),
-  and the graph must be acyclic.
-- **`explain`** renders the lowered graph (dependencies, human gates, side-effect/undo tags).
-- **`profile`** is EXPLAIN ANALYZE: topology (critical-path depth, parallelism, merge points, gate/
-  side-effect/undo coverage) plus projected cost/latency/success — all static, no execution.
-- **`simulate`** projects cost/success/latency/approvals against the mission budget.
-- **`run`** executes on the **local single-node profile** (in-memory, zero infra). It parks on human
-  gates and reports them; `--approve` drives them to completion; `--ledger PATH` persists the event log.
-- **`bundle`** runs the mission and exports a portable, self-verifying **case bundle** (events + outcome
-  + content digest) — `rdo mission bundle <target> --out run.json`.
-- **`replay`** rebuilds a fresh runtime from a bundle's events and confirms it reaches the **same
-  terminal state** (the event log is a faithful, replayable record; tampering is detected) —
-  `rdo mission replay <target> run.json`.
-- **`diff`** reports the structural differences between two bundles — `rdo mission diff a.json b.json`.
-- **`verify`** runs the mission and reports what the runtime recorded: terminal success, ledger
-  integrity, verification stages, and nodes succeeded.
-- **`ci`** is the promotion gate — one pass/fail over five checks (feasibility · budget · run ·
-  regression · replay). This is what a deploy blocks on. Drop
-  [`ci-templates/github-actions.yml`](ci-templates/github-actions.yml) into `.github/workflows/`.
-- **`init`** scaffolds a runnable starter mission — `rdo mission init my_mission` — that validates and
-  gates out of the box, so you edit a working mission rather than a blank file.
+## What ReDevOps is (and is not)
 
-`validate`/`explain`/`profile`/`simulate` never run anything or call a model. The dogfood fixtures live
-under [`examples/`](examples/): `revenue_rescue` (branching saga), `dataops_reconcile` (DataOpsBench S21
-merge/verify), `deploy_release` (a net-new gated pipeline), and `from_proposal` (below).
+| ReDevOps Runtime | Does **not** replace |
+|---|---|
+| runtime layer beneath applications | LangGraph |
+| context / evidence planning | LangChain |
+| governed mission execution | your business logic |
+| verification / replay | your model provider |
+| runtime telemetry / governance seams | your infrastructure |
+| provider / runtime optimization | your application UI |
 
-## One compilation path
+It runs **beneath** your agent. The single most useful guide is
+[**Add ReDevOps to an existing agent without replacing it**](docs/existing-agent-integration.md) — the
+correct integration wraps your existing call in a `capability`; it does not rewrite your agent.
 
-A human template is not the only way to get a `MissionProgram`. Three sources, one path:
+## What the public tests prove
 
-- **human** — `@template` + `MissionProgram.from_template(...)`;
-- **a domain compiler** (e.g. Quantify) — emits a `MissionProposal`, `MissionProgram.from_proposal(...)`
-  (see [`examples/from_proposal/`](examples/from_proposal/mission.py));
-- **the Discovery Runtime** — proposes a `suggested_template` + goal, `MissionProgram.from_discovery(...)`
-  (see [`examples/integrations/discovery_e2e.py`](examples/integrations/discovery_e2e.py) — a real run
-  against the Discovery Runtime).
+- installation works from a clean environment;
+- the minimal mission executes offline and deterministically;
+- an existing agent can be wrapped without a rewrite;
+- **replay reproduces the sealed plan** and terminal state;
+- a case bundle **verifies its own integrity** without re-running;
+- the security / telemetry plane is opt-in, not required for basic use.
 
-All three compile to a program that is **validated, run, replayed and gated identically** — the only
-difference is provenance: `program.source` (who authored it) and `program.origin` (the *why* — the
-triggering signal/decision, carried into the case bundle for audit). `from_discovery` takes the proposal
-as a dict, so the public SDK never depends on the enterprise Discovery Runtime.
+The full map is [docs/public-test-matrix.md](docs/public-test-matrix.md). Run it: `python -m pytest -q` (or a
+guarantee group, e.g. `python -m pytest tests/adoption -q`).
 
-## Architecture
+## Operate a mission (`rdo` CLI)
 
-The ReDevOps runtimes use a **functional-core / imperative-shell** design: canonical artifacts and
-deterministic transformations stay value-oriented and side-effect free, while runtime actors, stores,
-and providers sit behind explicit interfaces. See [ARCHITECTURE.md](ARCHITECTURE.md).
+```bash
+rdo doctor                                        # environment + live minimal-mission check
+rdo mission validate examples/revenue_rescue/mission.py   # static + compile checks (no execution)
+rdo mission explain  examples/revenue_rescue/mission.py   # the compiled physical graph
+rdo mission simulate examples/revenue_rescue/mission.py   # dry-run cost/latency/approvals/success
+rdo mission run      examples/revenue_rescue/mission.py --approve   # execute on the local profile
+rdo mission bundle   examples/revenue_rescue/mission.py --out run.json   # seal a replayable bundle
+rdo mission replay   examples/revenue_rescue/mission.py run.json         # reproduce it
+```
 
-## Design
+Full verb list and the M3 status: [QUICKSTART.md](QUICKSTART.md).
 
-The full design (the boundary, the `MissionProgram`-only public artifact, the `rdo mission` verbs
-including `profile`, the adapter SPIs, and the M0→M3 plan) is in
-`ReDevOps_Mission_SDK_and_DevOps_Design.md`.
+## Public AGPL stack vs enterprise extensions
 
-## License
+The public AGPL stack is the **open runtime contract and reference implementation** — canonical contracts,
+public runtime interfaces, and context/planning/execution/replay capabilities as actually shipped, with the
+public examples and tests. It is not a crippled demo.
 
-Apache-2.0 — see [LICENSE](LICENSE). The Mission SDK is the developer boundary and compatibility target,
-so it is permissively licensed: build applications against it freely, and implement conforming runtimes.
-The reference runtime it depends on, [`agentic-os`](https://github.com/redevops-io/agentic-os), is
-separately licensed under **AGPL-3.0** — running the SDK against it carries the runtime's AGPL for a served
-combined work. To use the reference runtime without AGPL obligations, contact ReDevOps for a commercial
-license.
+**Enterprise extensions** (separate, private repos) add production security enforcement, telemetry bridges,
+deployment adapters, secret-store plugins, and long-haul storage. They are **optional** and never required
+for public SDK use.
+
+## Repository role & map
+
+`mission-sdk` is the public front door — onboarding, composition, examples — and **links** to the canonical
+repos rather than forking their implementations. See [docs/repo-map.md](docs/repo-map.md) for which repo owns
+each subsystem (`runtime-contracts`, `context-runtime`, `discovery-runtime`, `agentic-os`, `redevops-rag`),
+[COMPATIBILITY.md](COMPATIBILITY.md) for pinned versions, and [PARITY.md](PARITY.md) for the SDK↔runtime
+contract check.
+
+## Developing against a local runtime
+
+`pip install -e .` resolves the pinned `agentic-os` from git. For development against a **local** runtime
+checkout, set `AGENTIC_OS_SRC=/path/to/agentic-os` — a loud, opt-in override (unset ⇒ a clear ImportError, so
+the SDK is never silently satisfied by an unknown checkout). See [ARCHITECTURE.md](ARCHITECTURE.md) and
+[CONTRIBUTING](CONTRIBUTING.md) if present.
