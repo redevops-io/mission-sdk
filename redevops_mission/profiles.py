@@ -80,11 +80,16 @@ class RunResult:
     containment: str | None = None              # RUNNING | CONTAINING | CONTAINED | REVIEW_REQUIRED | RECOVERED
     security_reasons: list[str] = field(default_factory=list)
     spans: list[dict] = field(default_factory=list)   # Mission-native trace tree (OTel-shaped)
+    # ── scheduling (observable so the concurrency ceilings can't silently diverge) ──
+    effective_concurrency: int = 1   # the limit that actually binds = min(executor pool, scheduler release)
+    scheduler_policy: str = "serial"  # "serial" (=1) | "safe_parallel"
 
     def to_text(self) -> str:
         lines = [f"run: {self.state.upper()}"
                  + (f"  ({self.approvals_applied} approval(s) applied)" if self.approvals_applied else "")]
         lines.append(f"  {self.nodes_succeeded} node(s) succeeded")
+        if self.effective_concurrency > 1:
+            lines.append(f"  scheduler: {self.scheduler_policy} (effective concurrency {self.effective_concurrency})")
         if self.pending:
             lines.append("  waiting on human decision:")
             for t in self.pending:
@@ -141,6 +146,8 @@ def run_program(program, operators, *, approve: bool = False, ledger_path: str |
         nodes_succeeded=timeline.count("NodeSucceeded"),
         approvals_applied=approvals,
         timeline=timeline,
+        effective_concurrency=getattr(rt, "effective_max_concurrency", 1),
+        scheduler_policy=("safe_parallel" if getattr(rt, "effective_max_concurrency", 1) > 1 else "serial"),
     )
     # Fold in the security assessment: correlate the boundary telemetry into a disposition, drive
     # containment, and surface the Mission-native trace tree. Only when a secure run produced events.
