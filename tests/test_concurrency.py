@@ -15,6 +15,7 @@ from __future__ import annotations
 import threading
 
 from redevops_mission import MissionProgram, Operator, capability, run_program, step, template
+from redevops_mission.profiles import drive
 
 
 def _two_independent(handlers):
@@ -110,3 +111,53 @@ def test_serial_mode_does_not_overlap():
     r = run_program(prog, ops, concurrency=1)
     assert r.succeeded
     assert saw["a_saw_b"] is False, "serial mode overlapped — the two ceilings may have diverged"
+
+
+# ── 3. safe-concurrency: resource/conflict keys end-to-end through the SDK (plan §7–§13, §22) ────────────
+
+def _fanout(name, steps, caps):
+    @template(name)
+    def _t(mission_id):
+        return steps
+    return MissionProgram.from_template(name, goal=name, grants=[]), [Operator("w", caps)]
+
+
+def _waves(rt, mid):
+    return [e["payload"] for e in rt.repo.timeline(mid) if e["type"] == "WaveScheduled"]
+
+
+def test_2b_bounded_provider_fanout_is_capped_by_max_parallelism():
+    """Five renders share one rate-limited provider (max_parallelism=2). Even at concurrency=8, no wave
+    releases more than 2 — the resource key binds, not the global ceiling."""
+    caps = [capability(f"render.{i}", (lambda inp: {}), provides=[f"clip{i}"], side_effecting=True,
+                       concurrency_key="provider:seedance", max_parallelism=2) for i in range(5)]
+    steps = [step(f"clip{i}", need=f"render clip {i}") for i in range(5)]
+    prog, ops = _fanout("p2b", steps, caps)
+    rt, mid, m, _ = drive(prog, ops, concurrency=8)
+    assert m.state.value == "succeeded"
+    peaks = [w["peak_parallel_nodes"] for w in _waves(rt, mid)]
+    assert peaks and max(peaks) <= 2, f"provider fan-out exceeded its limit: peaks={peaks}"
+
+
+def test_2c_conflicting_resource_serializes_with_an_auditable_reason():
+    """Two prod deploys share an exclusive cluster key → one serializes behind the other, WITH a reason;
+    a staging deploy (different key) runs alongside prod. Parallelize what's safe, serialize what must be."""
+    caps = [
+        capability("deploy.prod.a", lambda inp: {}, provides=["prod_a"], side_effecting=True,
+                   resource_keys=["k8s:cluster:prod"]),
+        capability("deploy.prod.b", lambda inp: {}, provides=["prod_b"], side_effecting=True,
+                   resource_keys=["k8s:cluster:prod"]),
+        capability("deploy.staging", lambda inp: {}, provides=["staging"], side_effecting=True,
+                   resource_keys=["k8s:cluster:staging"]),
+    ]
+    steps = [step("prod_a", need="deploy prod a"), step("prod_b", need="deploy prod b"),
+             step("staging", need="deploy staging")]
+    prog, ops = _fanout("p2c", steps, caps)
+    rt, mid, m, _ = drive(prog, ops, concurrency=8)
+    assert m.state.value == "succeeded"
+    w0 = _waves(rt, mid)[0]
+    # exactly one prod writer + staging run together; the other prod writer is held with a keyed reason
+    assert w0["peak_parallel_nodes"] == 2
+    assert len(w0["serialized_nodes"]) == 1
+    reason = next(iter(w0["serialization_reason"].values()))
+    assert "k8s:cluster:prod" in reason, f"serialization reason not auditable: {reason}"
