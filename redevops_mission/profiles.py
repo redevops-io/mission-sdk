@@ -19,7 +19,7 @@ from agentic_os.mission.runtime import MissionRuntime  # noqa: E402
 
 
 def local_runtime(operators, *, ledger_path: str | None = None, secure: bool = False,
-                  sandbox=None, authority=None):
+                  sandbox=None, authority=None, concurrency: int | None = None):
     """A single-JVM-equivalent in-process runtime: registry + local operator client + event ledger.
 
     With ``secure=True`` the v0.3.x runtime security seams are wired from the authored capabilities'
@@ -51,7 +51,17 @@ def local_runtime(operators, *, ledger_path: str | None = None, secure: bool = F
         if authority is not None:
             ex_kwargs["authority"] = authority
             ex_kwargs["authority_for"] = authority_for
-    runtime = MissionRuntime(registry, Executor(client, **ex_kwargs), store=store)
+    rt_kwargs: dict = {"store": store}
+    if concurrency is not None:
+        # Reach the runtime's built safe-parallel wave executor from the SDK boundary (not just the
+        # AGENTIC_OS_MISSION_CONCURRENCY env). Independent ready nodes then run concurrently and commit in
+        # deterministic causal order — plan fingerprint, node identity, idempotency, approvals and
+        # event-sourced replay are unaffected (only wall-clock changes). Move BOTH knobs together: the wave
+        # executor pool (max_concurrency) and how many the scheduler releases per wave (policy).
+        from agentic_os.mission.scheduler import SchedulePolicy  # noqa: PLC0415
+        rt_kwargs["max_concurrency"] = concurrency
+        rt_kwargs["policy"] = SchedulePolicy(max_concurrency=concurrency)
+    runtime = MissionRuntime(registry, Executor(client, **ex_kwargs), **rt_kwargs)
     runtime.security_monitor = monitor   # surfaced to run_program for the disposition/containment/spans
     return runtime
 
@@ -94,11 +104,14 @@ class RunResult:
 
 
 def drive(program, operators, *, approve: bool = False, ledger_path: str | None = None,
-          secure: bool = False, sandbox=None, authority=None):
+          secure: bool = False, sandbox=None, authority=None, concurrency: int | None = None):
     """Create + run a mission on the local profile, applying human approvals if `approve`.
     Returns (runtime, mission_id, mission, approvals_applied) — the raw handle bundle/replay build on.
-    `secure`/`sandbox`/`authority` opt into the v0.3.x runtime security seams (see `local_runtime`)."""
-    rt = local_runtime(operators, ledger_path=ledger_path, secure=secure, sandbox=sandbox, authority=authority)
+    `secure`/`sandbox`/`authority` opt into the v0.3.x runtime security seams (see `local_runtime`).
+    `concurrency` (>1) runs independent ready nodes concurrently via the runtime's safe-parallel wave
+    executor — replay/approval/exactly-once are preserved; default None keeps the runtime's own default."""
+    rt = local_runtime(operators, ledger_path=ledger_path, secure=secure, sandbox=sandbox,
+                       authority=authority, concurrency=concurrency)
     register_program_template(program)   # plan from the program's own steps, whatever its source
     mission = rt.create_mission(program.goal, policy_refs=list(program.grants), template=program.name)
     m = rt.run(mission.id)
@@ -115,9 +128,9 @@ def drive(program, operators, *, approve: bool = False, ledger_path: str | None 
 
 
 def run_program(program, operators, *, approve: bool = False, ledger_path: str | None = None,
-                secure: bool = False, sandbox=None, authority=None) -> RunResult:
+                secure: bool = False, sandbox=None, authority=None, concurrency: int | None = None) -> RunResult:
     rt, mid, m, approvals = drive(program, operators, approve=approve, ledger_path=ledger_path,
-                                  secure=secure, sandbox=sandbox, authority=authority)
+                                  secure=secure, sandbox=sandbox, authority=authority, concurrency=concurrency)
     pending = [t for t in rt.inbox() if t["mission_id"] == mid]
     timeline = [e["type"] for e in rt.repo.timeline(mid)]
     result = RunResult(
