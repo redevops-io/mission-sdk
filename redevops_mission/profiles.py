@@ -83,13 +83,16 @@ class RunResult:
     # ── scheduling (observable so the concurrency ceilings can't silently diverge) ──
     effective_concurrency: int = 1   # the limit that actually binds = min(executor pool, scheduler release)
     scheduler_policy: str = "serial"  # "serial" (=1) | "safe_parallel"
+    scheduler_config: dict = field(default_factory=dict)   # the full startup config (requested/effective/bound_by/…)
+    peak_parallelism: int = 1        # the MOST nodes actually released together in any wave (observed, not the cap)
 
     def to_text(self) -> str:
         lines = [f"run: {self.state.upper()}"
                  + (f"  ({self.approvals_applied} approval(s) applied)" if self.approvals_applied else "")]
         lines.append(f"  {self.nodes_succeeded} node(s) succeeded")
         if self.effective_concurrency > 1:
-            lines.append(f"  scheduler: {self.scheduler_policy} (effective concurrency {self.effective_concurrency})")
+            lines.append(f"  scheduler: {self.scheduler_policy} (effective concurrency "
+                         f"{self.effective_concurrency}, peak parallelism {self.peak_parallelism})")
         if self.pending:
             lines.append("  waiting on human decision:")
             for t in self.pending:
@@ -137,7 +140,13 @@ def run_program(program, operators, *, approve: bool = False, ledger_path: str |
     rt, mid, m, approvals = drive(program, operators, approve=approve, ledger_path=ledger_path,
                                   secure=secure, sandbox=sandbox, authority=authority, concurrency=concurrency)
     pending = [t for t in rt.inbox() if t["mission_id"] == mid]
-    timeline = [e["type"] for e in rt.repo.timeline(mid)]
+    events = rt.repo.timeline(mid)
+    timeline = [e["type"] for e in events]
+    waves = [e["payload"] for e in events if e["type"] == "WaveScheduled"]
+    peak = max((w.get("peak_parallel_nodes", 0) for w in waves), default=1)
+    cfg = next((e["payload"] for e in events if e["type"] == "SchedulerConfigured"), None)
+    if cfg is None and hasattr(rt, "scheduler_config"):
+        cfg = rt.scheduler_config()
     result = RunResult(
         state=m.state.value,
         succeeded=m.state.value == "succeeded",
@@ -148,6 +157,8 @@ def run_program(program, operators, *, approve: bool = False, ledger_path: str |
         timeline=timeline,
         effective_concurrency=getattr(rt, "effective_max_concurrency", 1),
         scheduler_policy=("safe_parallel" if getattr(rt, "effective_max_concurrency", 1) > 1 else "serial"),
+        scheduler_config=cfg or {},
+        peak_parallelism=max(1, peak),
     )
     # Fold in the security assessment: correlate the boundary telemetry into a disposition, drive
     # containment, and surface the Mission-native trace tree. Only when a secure run produced events.

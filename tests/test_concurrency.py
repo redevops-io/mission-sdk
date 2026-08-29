@@ -161,3 +161,27 @@ def test_2c_conflicting_resource_serializes_with_an_auditable_reason():
     assert len(w0["serialized_nodes"]) == 1
     reason = next(iter(w0["serialization_reason"].values()))
     assert "k8s:cluster:prod" in reason, f"serialization reason not auditable: {reason}"
+
+
+def test_scheduler_config_and_observed_peak_are_on_the_record():
+    """Guard against another 'implemented but effectively disabled' failure: a run must expose its
+    effective config (requested vs effective, the deciding ceiling) AND the peak parallelism actually
+    observed — which can be LOWER than the ceiling when a resource key binds, and that's visible."""
+    caps = [capability(f"render.{i}", (lambda inp: {}), provides=[f"clip{i}"], side_effecting=True,
+                       concurrency_key="provider:seedance", max_parallelism=2) for i in range(5)]
+    steps = [step(f"clip{i}", need=f"render clip {i}") for i in range(5)]
+    prog, ops = _fanout("pcfg", steps, caps)
+    r = run_program(prog, ops, concurrency=8)
+    cfg = r.scheduler_config
+    assert cfg["requested_concurrency"] == 8 and cfg["effective_max_concurrency"] == 8
+    assert cfg["scheduler_policy"] == "safe_parallel" and cfg["bound_by"] == "executor_pool"
+    assert set(cfg["capabilities_with_conflict_semantics"]) == {f"render.{i}" for i in range(5)}
+    # effective ceiling is 8, but the provider cap means the OBSERVED peak is 2 — and that's on the record
+    assert r.peak_parallelism == 2, f"observed peak not surfaced: {r.peak_parallelism}"
+
+
+def test_serial_default_is_visible_in_the_config():
+    prog, ops = _two_independent([lambda i: {"a": 1}, lambda i: {"b": 1}])
+    r = run_program(prog, ops)  # no concurrency
+    assert r.scheduler_config["scheduler_policy"] == "serial"
+    assert r.scheduler_config["effective_max_concurrency"] == 1
