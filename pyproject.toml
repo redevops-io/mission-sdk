@@ -24,7 +24,7 @@ classifiers = [
 # (public is untagged); switch to `agentic-os==0.1.0aN` once a release is tagged. `AGENTIC_OS_SRC` is a
 # dev-only override.
 dependencies = [
-  "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@63c0b255cb9f6b3c64ca9c62791e65975963ef56",
+  "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@0c6fb0c9329ec251df1b2ef3cfb68964375e9e1a",
 ]
 
 # Optional adoption extras. The default install needs none of these to run examples/00_minimal.
