@@ -11,6 +11,7 @@ application-facing front door.
 ![package](https://img.shields.io/badge/pip-redevops--mission-informational)
 ![license](https://img.shields.io/badge/license-AGPL--3.0-green)
 ![status](https://img.shields.io/badge/status-alpha%20(M3)-orange)
+[![NVIDIA Inception](https://img.shields.io/badge/NVIDIA-Inception%20Program%20Member-76B900.svg)](https://www.nvidia.com/en-us/startups/)
 
 **[Quickstart](QUICKSTART.md) · [Architecture](ARCHITECTURE.md) · [Examples](examples/) · [For coding agents](AGENTS.md)**
 
