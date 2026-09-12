@@ -71,18 +71,20 @@ step definitions and re-registering on replay. Now consistent cross-process unde
 
 ## Verdict & pinning decision
 
-**Exact behavioral parity** for the SDK's contract — the public runtime satisfies it fully, and now the
-contracts the SDK rides on are **versioned and public** (`execution-plan/v8`, `runtime-event/v10`, …). The
-only remaining gap is a **release tag**: public is untagged and reports `0.1.0`, so `agentic-os==0.1.0` is
-ambiguous.
+**Exact behavioral parity** for the SDK's contract — the public runtime satisfies it fully, and the
+contracts the SDK rides on are **versioned and public** (`execution-plan/v8`, `runtime-event/v10`, …).
 
-For alpha the SDK therefore pins the current **public `main` commit**:
+The SDK pins a runtime **release tag**. The runtimes are versioned on the **`v0.3.x`** line (release tags
+lead the pyproject version by convention — agentic-os reports `0.2.4` in metadata while its releases are
+tagged `v0.3.0`, `v0.3.1`, …), so a PEP 440 `agentic-os==0.3.1` specifier would not match the package
+metadata; the SDK pins the **git tag** instead:
 
 ```
-agentic-os @ git+https://github.com/redevops-io/agentic-os.git@0c6fb0c
+agentic-os @ git+https://github.com/redevops-io/agentic-os.git@v0.3.1
 ```
 
-This is reproducible and honest. **Next step to a clean version pin:** cut a tagged release of `agentic-os`
-(e.g. `v0.1.0-alpha` at this commit); the SDK then pins `agentic-os==0.1.0a…`, and can begin pinning the
-`runtime-contracts` versions directly once its surface consumes them. `_bootstrap` is a **loud, opt-in dev
-fallback** (only via `AGENTIC_OS_SRC`), never a silent compatibility layer.
+`v0.3.1` is the release cut at `0c6fb0c` — the exact commit this parity check verified. Reproducible and
+honest. **Next step:** once agentic-os's package metadata is aligned to the `v0.3.x` tags, the SDK can move
+to a PEP 440 `agentic-os==0.3.x` specifier, and begin pinning `runtime-contracts` versions directly once its
+surface consumes them. `_bootstrap` is a **loud, opt-in dev fallback** (only via `AGENTIC_OS_SRC`), never a
+silent compatibility layer.

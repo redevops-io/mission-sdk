@@ -20,11 +20,11 @@ classifiers = [
   "Development Status :: 3 - Alpha",
 ]
 # The one runtime dependency. Parity checked against the SDK's actual import surface (see PARITY.md):
-# the public `agentic-os` runtime satisfies the SDK contract exactly. Pinned to the current `main` commit
-# (public is untagged); switch to `agentic-os==0.1.0aN` once a release is tagged. `AGENTIC_OS_SRC` is a
-# dev-only override.
+# the public `agentic-os` runtime satisfies the SDK contract exactly. Pinned to a runtime release **tag** —
+# the runtimes are versioned on the `v0.3.x` line (release tags lead the pyproject version by convention),
+# so we pin `@v0.3.1` (== 0c6fb0c) rather than a bare commit. `AGENTIC_OS_SRC` is a dev-only override.
 dependencies = [
-  "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@0c6fb0c9329ec251df1b2ef3cfb68964375e9e1a",
+  "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@v0.3.1",
 ]
 
 # Optional adoption extras. The default install needs none of these to run examples/00_minimal.
