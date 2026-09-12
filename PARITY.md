@@ -13,6 +13,12 @@ versioned public contracts `merge/v9` · `execution-plan/v8` · `runtime-event/v
 the reference runtime `agentic-os` is **AGPL-3.0** (running the SDK against it carries the runtime's AGPL
 for a served combined work).
 
+**Re-verified 2026-09-12** against public `agentic-os` `main` @ `0c6fb0c` (240 commits past the prior pin
+`63c0b25`, spanning the outcome/learning-loop + governed-assist line of work): the SDK's **11-module import
+surface is unchanged** (all symbols/methods present), and the **full SDK suite is 43 passed** (with
+`runtime_contracts` on the path — the `security_monitor` telemetry tests import it as an opt-in capability;
+it is *not* in the SDK's own dependency surface). Pin bumped to `0c6fb0c` accordingly.
+
 ## The SDK's actual dependency surface
 
 `redevops_mission` imports **11 modules** from the runtime — directly:
@@ -73,7 +79,7 @@ ambiguous.
 For alpha the SDK therefore pins the current **public `main` commit**:
 
 ```
-agentic-os @ git+https://github.com/redevops-io/agentic-os.git@b43d11c
+agentic-os @ git+https://github.com/redevops-io/agentic-os.git@0c6fb0c
 ```
 
 This is reproducible and honest. **Next step to a clean version pin:** cut a tagged release of `agentic-os`
