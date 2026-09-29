@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "redevops-mission"
 version = "0.2.0a0"
 description = "Mission SDK — the developer boundary over the ReDevOps Mission Runtime (author, validate, explain, run, replay a governed MissionProgram)."
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 readme = "README.md"
 # Permissive by design: the SDK is the developer boundary + compatibility target, so it is Apache-2.0
 # (build against it freely; implement conforming runtimes). The reference runtime `agentic-os` is AGPL-3.0
@@ -24,7 +24,7 @@ classifiers = [
 # the runtimes are versioned on the `v0.3.x` line (release tags lead the pyproject version by convention),
 # so we pin `@v0.3.1` (== 0c6fb0c) rather than a bare commit. `AGENTIC_OS_SRC` is a dev-only override.
 dependencies = [
-  "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@v0.3.4",
+  "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@v0.3.9",
 ]
 
 # Optional adoption extras. The default install needs none of these to run examples/00_minimal.
