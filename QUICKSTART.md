@@ -50,3 +50,21 @@ importing a runtime internal. The `ci` gate is what a deploy would block on. Cop
 under [`examples/`](examples/) as a starting point, and drop
 [`ci-templates/github-actions.yml`](ci-templates/github-actions.yml) into `.github/workflows/` to gate
 every mission in your repo.
+
+## Durable runs (resume after a restart)
+
+A mission parked on a human gate can outlive the process that started it. Run it on a durable event store and
+pick it up later — rehydration folds the log, it does not re-run finished nodes:
+
+```python
+from redevops_mission import open_event_store, pending_tasks, resume_program
+from redevops_mission.profiles import drive
+
+store = open_event_store("postgres", dsn=DSN)          # or "jsonl"/"duckdb" with path=
+_, mid, m, _ = drive(PROGRAM, OPERATORS, store=store)  # → waiting_human
+
+# later, in another process
+rt, m = resume_program(PROGRAM, OPERATORS, mid, store=open_event_store("postgres", dsn=DSN))
+(task,) = pending_tasks(rt, mid)
+rt.approve(mid, task["node_id"], "approve", edit={...})
+```

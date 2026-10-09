@@ -19,7 +19,7 @@ from agentic_os.mission.runtime import MissionRuntime  # noqa: E402
 
 
 def local_runtime(operators, *, ledger_path: str | None = None, secure: bool = False,
-                  sandbox=None, authority=None, concurrency: int | None = None):
+                  sandbox=None, authority=None, concurrency: int | None = None, store=None):
     """A single-JVM-equivalent in-process runtime: registry + local operator client + event ledger.
 
     With ``secure=True`` the v0.3.x runtime security seams are wired from the authored capabilities'
@@ -32,7 +32,9 @@ def local_runtime(operators, *, ledger_path: str | None = None, secure: bool = F
     All opt-in: ``secure=False`` (the default) builds exactly the runtime as before."""
     registry = build_registry(operators)
     client = LocalOperatorClient({op.name: op for op in operators})
-    store = LocalEventLedger(ledger_path).store()
+    # `store` — an event store from `open_event_store` (e.g. Postgres) shared across processes, so a mission
+    # parked on a human gate survives a restart and is picked up with `resume_program`. Default: local ledger.
+    store = store if store is not None else LocalEventLedger(ledger_path).store()
     monitor = None
     ex_kwargs: dict = {}
     if secure:
@@ -111,14 +113,14 @@ class RunResult:
         return "\n".join(lines)
 
 
-def drive(program, operators, *, approve: bool = False, ledger_path: str | None = None,
+def drive(program, operators, *, approve: bool = False, ledger_path: str | None = None, store=None,
           secure: bool = False, sandbox=None, authority=None, concurrency: int | None = None):
     """Create + run a mission on the local profile, applying human approvals if `approve`.
     Returns (runtime, mission_id, mission, approvals_applied) — the raw handle bundle/replay build on.
     `secure`/`sandbox`/`authority` opt into the v0.3.x runtime security seams (see `local_runtime`).
     `concurrency` (>1) runs independent ready nodes concurrently via the runtime's safe-parallel wave
     executor — replay/approval/exactly-once are preserved; default None keeps the runtime's own default."""
-    rt = local_runtime(operators, ledger_path=ledger_path, secure=secure, sandbox=sandbox,
+    rt = local_runtime(operators, ledger_path=ledger_path, store=store, secure=secure, sandbox=sandbox,
                        authority=authority, concurrency=concurrency)
     register_program_template(program)   # plan from the program's own steps, whatever its source
     mission = rt.create_mission(program.goal, policy_refs=list(program.grants), template=program.name)
@@ -135,9 +137,9 @@ def drive(program, operators, *, approve: bool = False, ledger_path: str | None 
     return rt, mission.id, m, approvals
 
 
-def run_program(program, operators, *, approve: bool = False, ledger_path: str | None = None,
+def run_program(program, operators, *, approve: bool = False, ledger_path: str | None = None, store=None,
                 secure: bool = False, sandbox=None, authority=None, concurrency: int | None = None) -> RunResult:
-    rt, mid, m, approvals = drive(program, operators, approve=approve, ledger_path=ledger_path,
+    rt, mid, m, approvals = drive(program, operators, approve=approve, ledger_path=ledger_path, store=store,
                                   secure=secure, sandbox=sandbox, authority=authority, concurrency=concurrency)
     pending = [t for t in rt.inbox() if t["mission_id"] == mid]
     events = rt.repo.timeline(mid)
@@ -171,3 +173,20 @@ def run_program(program, operators, *, approve: bool = False, ledger_path: str |
         from agentic_os.mission.tracing import MissionTrace  # noqa: PLC0415 — opt-in
         result.spans = MissionTrace(mid).spans(monitor.trajectory)
     return result
+
+
+def resume_program(program, operators, mission_id: str, *, store, concurrency: int | None = None):
+    """Pick up a mission another process started, from a durable event store (``open_event_store``).
+
+    Rehydrates by folding the store's events — it does NOT re-run completed nodes — so a mission that was
+    parked on a human gate comes back still parked, with its inbox task, and `rt.approve(...)` continues it.
+    Returns ``(runtime, mission)``. The program's steps are re-registered so the plan recompiles identically
+    (rehydrate fails closed on a divergent plan)."""
+    register_program_template(program)
+    rt = local_runtime(operators, store=store, concurrency=concurrency)
+    return rt, rt.rehydrate(mission_id)
+
+
+def pending_tasks(runtime, mission_id: str) -> list[dict]:
+    """The human-gate tasks a mission is waiting on (the inbox, filtered to this mission)."""
+    return [t for t in runtime.inbox() if t["mission_id"] == mission_id]
