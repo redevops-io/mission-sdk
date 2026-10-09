@@ -9,7 +9,7 @@ application-facing front door.
 
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![package](https://img.shields.io/badge/pip-redevops--mission-informational)
-![license](https://img.shields.io/badge/license-AGPL--3.0-green)
+![license](https://img.shields.io/badge/license-Apache--2.0-green)
 ![status](https://img.shields.io/badge/status-alpha%20(M3)-orange)
 [![NVIDIA Inception](https://img.shields.io/badge/NVIDIA-Inception%20Program%20Member-76B900.svg)](https://www.nvidia.com/en-us/startups/)
 
@@ -20,13 +20,18 @@ workflow engine, or LLM framework.
 
 ## Install
 
+> `redevops-mission` is **not yet published to PyPI**. Install from the git repo or a clone until it is.
+
 ```bash
-pip install redevops-mission          # the SDK + its pinned agentic-os runtime; exposes the `rdo` command
+# from the repo (recommended today)
+pip install "redevops-mission @ git+https://github.com/redevops-io/mission-sdk.git"
+# …or from a clone
+pip install -e .                      # the SDK + its pinned agentic-os runtime; exposes the `rdo` command
 ```
 
-From a clone (until the package is on your index): `pip install -e .`. Optional adoption extras:
-`redevops-mission[langgraph]`, `[langchain]`, `[telemetry]`, `[full]`. The default install needs **no
-provider key and no network** to run the minimal example. Check the environment any time with `rdo doctor`.
+Optional adoption extras: `redevops-mission[langgraph]`, `[langchain]`, `[telemetry]`, `[full]`. The default
+install needs **no provider key and no network** to run the minimal example. Check the environment any time
+with `rdo doctor`.
 
 ## Minimal working example
 
