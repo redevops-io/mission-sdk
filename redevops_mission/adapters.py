@@ -41,3 +41,13 @@ class RagAdapter(Protocol):
     """Seam (M2): reference-first retrieval — returns handles, never raw text. The local profile does
     no retrieval by default."""
     def retrieve(self, query: str) -> list: ...
+
+
+def open_event_store(backend: str | None = None, *, path: str | None = None, dsn: str | None = None):
+    """A durable mission event store: ``memory`` | ``jsonl`` (path) | ``duckdb`` (path) | ``postgres`` (dsn).
+    Defaults honour ``MISSION_EVENT_BACKEND`` / ``MISSION_EVENT_PATH`` / ``MISSION_EVENT_DSN``. Pass the result
+    as ``store=`` to `run_program`/`drive`, and to `resume_program` in a later process."""
+    from ._bootstrap import ensure_runtime
+    ensure_runtime()
+    from agentic_os.mission.event_backends import open_event_store as _open
+    return _open(backend, path=path, dsn=dsn)
