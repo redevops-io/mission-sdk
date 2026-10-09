@@ -24,7 +24,7 @@ classifiers = [
 # the runtimes are versioned on the `v0.3.x` line (release tags lead the pyproject version by convention),
 # so we pin `@v0.3.1` (== 0c6fb0c) rather than a bare commit. `AGENTIC_OS_SRC` is a dev-only override.
 dependencies = [
-  "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@v0.3.9",
+  "agentic-os @ git+https://github.com/redevops-io/agentic-os.git@v0.3.22",
 ]
 
 # Optional adoption extras. The default install needs none of these to run examples/00_minimal.
