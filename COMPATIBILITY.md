@@ -5,7 +5,7 @@ page is the human-readable matrix; `rdo doctor` reports what is **actually insta
 
 | Component | This release | Notes |
 |---|---|---|
-| **mission-sdk** (`redevops-mission`) | `0.2.0a0` | this repo — the public SDK boundary |
+| **mission-sdk** (`redevops-mission`) | `0.3.4` | this repo — the public SDK boundary |
 | Python | `>= 3.10` | |
 | `agentic-os` | pinned at commit `63c0b255` | hard dependency — the Mission execution/replay/governance engine, resolved from git by `pip install` |
 | `runtime-contracts` | `>= 0.3` | canonical contracts (pulled transitively where used) |
@@ -27,7 +27,7 @@ Reports the installed component versions, whether the runtime imports, and wheth
 — the fastest way to confirm an environment is benchmark-ready. Example output:
 
 ```text
-mission-sdk        0.2.0a0   OK
+mission-sdk        0.3.4   OK
 python             3.12.x    OK
 agentic-os         <ver>     OK
 runtime available  yes       OK
