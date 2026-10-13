@@ -22,7 +22,7 @@ from .profiles import RunResult, pending_tasks, resume_program, run_program
 from .program import MissionProgram, MissionProposal, MissionStep
 from .scaffold import init_mission
 
-__version__ = "0.2.0a0"
+__version__ = "0.3.4"
 
 __all__ = [
     "template", "step", "capability", "Operator",
