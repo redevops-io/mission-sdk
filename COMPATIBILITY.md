@@ -5,9 +5,9 @@ page is the human-readable matrix; `rdo doctor` reports what is **actually insta
 
 | Component | This release | Notes |
 |---|---|---|
-| **mission-sdk** (`redevops-mission`) | `0.3.5` | this repo — the public SDK boundary |
+| **mission-sdk** (`redevops-mission`) | `0.3.6` | this repo — the public SDK boundary |
 | Python | `>= 3.10` | |
-| `agentic-os` | pinned at commit `63c0b255` | hard dependency — the Mission execution/replay/governance engine, resolved from git by `pip install` |
+| `agentic-os` | pinned at tag `v0.3.29` | hard dependency — the Mission execution/replay/governance engine, resolved from git by `pip install` |
 | `runtime-contracts` | `>= 0.3` | canonical contracts (pulled transitively where used) |
 | `context-runtime` | `>= 0.2` | context/optimization capabilities (optional at runtime) |
 | `discovery-runtime` | `>= 0.3` | discovery/intent/evidence (optional at runtime) |
@@ -27,7 +27,7 @@ Reports the installed component versions, whether the runtime imports, and wheth
 — the fastest way to confirm an environment is benchmark-ready. Example output:
 
 ```text
-mission-sdk        0.3.5   OK
+mission-sdk        0.3.6   OK
 python             3.12.x    OK
 agentic-os         <ver>     OK
 runtime available  yes       OK
