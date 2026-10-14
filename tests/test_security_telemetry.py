@@ -24,7 +24,7 @@ OPERATORS = [
         capability("crm.read", handler=lambda i: {"records": 2000},
                    provides=["records_read"], permissions=["crm:read"],
                    required_authority=["read:crm"], data_classifications=["pii"]),
-        capability("storage.upload", handler=lambda i: {},
+        capability("storage.upload", handler=lambda i: {"stored": True},
                    provides=["uploaded"], permissions=["storage:write"], side_effecting=True,
                    undo="storage.delete", required_authority=["write:storage"],
                    network=["s3.external.com"]),

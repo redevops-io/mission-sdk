@@ -129,7 +129,7 @@ def _waves(rt, mid):
 def test_2b_bounded_provider_fanout_is_capped_by_max_parallelism():
     """Five renders share one rate-limited provider (max_parallelism=2). Even at concurrency=8, no wave
     releases more than 2 — the resource key binds, not the global ceiling."""
-    caps = [capability(f"render.{i}", (lambda inp: {}), provides=[f"clip{i}"], side_effecting=True,
+    caps = [capability(f"render.{i}", (lambda inp: {"done": True}), provides=[f"clip{i}"], side_effecting=True,
                        concurrency_key="provider:seedance", max_parallelism=2) for i in range(5)]
     steps = [step(f"clip{i}", need=f"render clip {i}") for i in range(5)]
     prog, ops = _fanout("p2b", steps, caps)
@@ -143,11 +143,11 @@ def test_2c_conflicting_resource_serializes_with_an_auditable_reason():
     """Two prod deploys share an exclusive cluster key → one serializes behind the other, WITH a reason;
     a staging deploy (different key) runs alongside prod. Parallelize what's safe, serialize what must be."""
     caps = [
-        capability("deploy.prod.a", lambda inp: {}, provides=["prod_a"], side_effecting=True,
+        capability("deploy.prod.a", lambda inp: {"done": True}, provides=["prod_a"], side_effecting=True,
                    resource_keys=["k8s:cluster:prod"]),
-        capability("deploy.prod.b", lambda inp: {}, provides=["prod_b"], side_effecting=True,
+        capability("deploy.prod.b", lambda inp: {"done": True}, provides=["prod_b"], side_effecting=True,
                    resource_keys=["k8s:cluster:prod"]),
-        capability("deploy.staging", lambda inp: {}, provides=["staging"], side_effecting=True,
+        capability("deploy.staging", lambda inp: {"done": True}, provides=["staging"], side_effecting=True,
                    resource_keys=["k8s:cluster:staging"]),
     ]
     steps = [step("prod_a", need="deploy prod a"), step("prod_b", need="deploy prod b"),
@@ -167,7 +167,7 @@ def test_scheduler_config_and_observed_peak_are_on_the_record():
     """Guard against another 'implemented but effectively disabled' failure: a run must expose its
     effective config (requested vs effective, the deciding ceiling) AND the peak parallelism actually
     observed — which can be LOWER than the ceiling when a resource key binds, and that's visible."""
-    caps = [capability(f"render.{i}", (lambda inp: {}), provides=[f"clip{i}"], side_effecting=True,
+    caps = [capability(f"render.{i}", (lambda inp: {"done": True}), provides=[f"clip{i}"], side_effecting=True,
                        concurrency_key="provider:seedance", max_parallelism=2) for i in range(5)]
     steps = [step(f"clip{i}", need=f"render clip {i}") for i in range(5)]
     prog, ops = _fanout("pcfg", steps, caps)
