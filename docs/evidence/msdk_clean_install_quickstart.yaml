@@ -1,0 +1,13 @@
+claim_id: msdk_clean_install_quickstart
+claim: "The minimal and governed quickstart examples run offline with no provider key after installing redevops-mission from the v0.3.7 git tag into a clean python:3.12-slim container."
+status: Internally reproduced
+code_commit: "e9b8fad499cc15e19576b6730e9e017555da35cb (package from tag v0.3.7; example 02 from this change)"
+dataset: NOT_IN_REPO
+protocol: "docs/QUICKSTART_VERIFIED.md lists the exact commands; one run on one machine"
+model: "none (no model is called; handlers are plain functions)"
+metrics: "doctor: all OK; 00_minimal replay consistent=True; 02 parked at gate then succeeded; pytest 44 passed"
+baselines: NOT_IN_REPO
+reproduce: "see docs/QUICKSTART_VERIFIED.md"
+artifacts: "docs/QUICKSTART_VERIFIED.md; .github/workflows/public-tests.yml (editable-install variant)"
+limitations: "Linux x86_64, Python 3.12 only; run by the maintainers' tooling, not independently reproduced; CI does not cover the git-tag install"
+review: "none; no external review"

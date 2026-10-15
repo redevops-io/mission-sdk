@@ -8,8 +8,16 @@ carry their own policies in their own repositories.
 
 ## Reporting a vulnerability
 
-Report privately — do **not** open a public issue for a suspected vulnerability. Use GitHub's **Report a
-vulnerability** (Security → Advisories) on this repo, or email the maintainers. Include a description, the
+Report privately — do **not** open a public issue for a suspected vulnerability.
+
+- **Security contact: to be confirmed.** No dedicated security address has been published for this repository.
+- GitHub's **Report a vulnerability** (Security → Advisories) is the documented path, but private
+  vulnerability reporting was **not enabled** on this repository when checked on 2026-10-15; if the button is
+  absent, use the general ReDevOps contact published on the GitHub organization profile
+  (redevops@redevops.io) and say it is a security report. That address is a general contact, not a confirmed
+  security inbox.
+
+Include a description, the
 affected version (`rdo doctor` output helps), and a minimal reproduction. Expect an acknowledgement within a
 few business days and a coordinated disclosure once a fix is available.
 
@@ -33,4 +41,4 @@ environment or a secret store at call time. The public examples deliberately use
 
 ## Supported versions
 
-This is alpha (M3). Security fixes land on the latest `0.2.x` line; there is no long-term support branch yet.
+This is alpha (M3). Security fixes target the latest tagged release line (currently `0.3.x`); there is no long-term support branch.
