@@ -12,7 +12,7 @@ agent framework. It is **not** a vector DB, a RAG library, a generic workflow en
 it does **not** replace LangGraph / LangChain / your custom agent — it runs underneath them.
 
 - **Public package:** `redevops-mission` · **import:** `redevops_mission` · **CLI:** `rdo`
-- **Python:** ≥ 3.10
+- **Python:** ≥ 3.11
 - **Install (from this repo):** `pip install -e .` — resolves the pinned `agentic-os` runtime from git and
   exposes the `rdo` command. (For a local runtime checkout during development, set `AGENTIC_OS_SRC=/path/to/agentic-os`.)
 
