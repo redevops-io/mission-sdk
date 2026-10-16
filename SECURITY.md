@@ -10,12 +10,7 @@ carry their own policies in their own repositories.
 
 Report privately — do **not** open a public issue for a suspected vulnerability.
 
-- **Security contact: to be confirmed.** No dedicated security address has been published for this repository.
-- GitHub's **Report a vulnerability** (Security → Advisories) is the documented path, but private
-  vulnerability reporting was **not enabled** on this repository when checked on 2026-10-15; if the button is
-  absent, use the general ReDevOps contact published on the GitHub organization profile
-  (redevops@redevops.io) and say it is a security report. That address is a general contact, not a confirmed
-  security inbox.
+- Email **redevops@redevops.io** (the ReDevOps organisation contact), stating that it is a security report.
 
 Include a description, the
 affected version (`rdo doctor` output helps), and a minimal reproduction. Expect an acknowledgement within a

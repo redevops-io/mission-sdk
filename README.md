@@ -46,8 +46,7 @@ python mission-sdk/examples/02_governed_quickstart/main.py  # adds an approval g
 
 ## Limitations
 
-Alpha API; single-node local profile by default; hard dependency on `agentic-os` (git pin); the
-Apache-2.0 / source-available licence relationship is unresolved (counsel); no independent validation of any
+Alpha API; single-node local profile by default; hard dependency on `agentic-os` (git pin); no independent validation of any
 kind. Full list: [STATUS.md](STATUS.md).
 
 ## Naming
@@ -191,6 +190,4 @@ the SDK is never silently satisfied by an unknown checkout). See [ARCHITECTURE.m
 ## Licence
 
 This package: Apache-2.0 (see [LICENSE](LICENSE) and [NOTICE](NOTICE)). It depends on `agentic-os`, whose
-`LICENSE.md` is titled "source-available, not open source" (AGPL-3.0-or-later WITH Commons-Clause). How those
-two licences interact is an open question that this documentation does not answer; it is with counsel.
-Read both licence files before depending on this package.
+`LICENSE.md` is titled "source-available, not open source" (AGPL-3.0-or-later WITH Commons-Clause). Read both licence files before depending on this package.
