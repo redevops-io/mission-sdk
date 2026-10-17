@@ -25,14 +25,14 @@ run time.
 
 ```bash
 python -m venv .venv && . .venv/bin/activate
-pip install "redevops-mission @ git+https://github.com/redevops-io/mission-sdk.git@v0.3.7"
+pip install "redevops-mission @ git+https://github.com/redevops-io/mission-sdk.git@v0.3.8"
 git clone --depth 1 https://github.com/redevops-io/mission-sdk.git      # for the example files only
 python mission-sdk/examples/00_minimal/main.py              # plan, run, explain, replay, verify
 python mission-sdk/examples/02_governed_quickstart/main.py  # adds an approval gate and a sealed "receipt"
 ```
 
-(The example files come from the default branch; the installed package comes from the `v0.3.7` tag.
-`02_governed_quickstart` is not in the `v0.3.7` tag.) What was actually run, on which OS and commit, and its exact output:
+(The example files come from the default branch; the installed package comes from the `v0.3.8` tag.
+`02_governed_quickstart` is included from `v0.3.8`.) What was actually run, on which OS and commit, and its exact output:
 [docs/QUICKSTART_VERIFIED.md](docs/QUICKSTART_VERIFIED.md).
 
 ## Evidence
@@ -74,13 +74,13 @@ a fourth runtime. This SDK is the front door to the Mission part. Glossary:
 
 ```bash
 # from a git tag (needs git on PATH)
-pip install "redevops-mission @ git+https://github.com/redevops-io/mission-sdk.git@v0.3.7"
+pip install "redevops-mission @ git+https://github.com/redevops-io/mission-sdk.git@v0.3.8"
 # …or from a clone
 pip install -e .                      # the SDK + its pinned agentic-os runtime; exposes the `rdo` command
 ```
 
 Optional adoption extras (`[langgraph]`, `[langchain]`, `[telemetry]`, `[full]`), e.g.
-`pip install "redevops-mission[langgraph] @ git+https://github.com/redevops-io/mission-sdk.git@v0.3.7"`. The default
+`pip install "redevops-mission[langgraph] @ git+https://github.com/redevops-io/mission-sdk.git@v0.3.8"`. The default
 install needs **no provider key and no network** to run the minimal example. Check the environment any time
 with `rdo doctor`.
 
