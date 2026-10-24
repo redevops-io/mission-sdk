@@ -33,13 +33,13 @@ python mission-sdk/examples/02_governed_quickstart/main.py  # adds an approval g
 
 (The example files come from the default branch; the installed package comes from the `v0.3.8` tag.
 `02_governed_quickstart` is included from `v0.3.8`.) What was actually run, on which OS and commit, and its exact output:
-[docs/QUICKSTART_VERIFIED.md](docs/QUICKSTART_VERIFIED.md).
+[docs/quickstart-verified.md](docs/quickstart-verified.md).
 
 ## Evidence
 
 - CI (`public-tests` workflow): editable install from a clone, `rdo doctor`, examples, replay, adoption tests.
   This does **not** exercise the git-tag install above; that path was checked by hand, see
-  [QUICKSTART_VERIFIED.md](docs/QUICKSTART_VERIFIED.md).
+  [quickstart-verified.md](docs/quickstart-verified.md).
 - Evidence cards for quantitative statements: [docs/evidence/](docs/evidence/). Every card is labelled
   *Illustrative/synthetic*, *Internally reproduced*, *Externally reproduced* or *Field validated*. None of the
   claims in this repository is externally reproduced or field validated.
