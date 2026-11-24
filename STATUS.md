@@ -1,6 +1,6 @@
 # Status
 
-Last verification date: **2026-11-24**. Package version `0.3.9` (`redevops_mission.__version__`).
+Last verification date: **2026-11-24**. Package version `0.3.10` (`redevops_mission.__version__`).
 
 **Maturity: alpha.** Reference SDK. Not a production service. Not independently validated.
 
@@ -40,7 +40,7 @@ Last verification date: **2026-11-24**. Package version `0.3.9` (`redevops_missi
   checked by hand once (2026-10-15).
 - Tested on Linux x86_64 with Python 3.12 only (declared minimum 3.11).
 - `COMPATIBILITY.md` pins are maintained by hand.
-- GitHub has one release (`v0.1.0-alpha`) while tags run to `v0.3.9`; see [CHANGELOG](CHANGELOG.md).
+- GitHub has one release (`v0.1.0-alpha`) while tags run to `v0.3.10`; see [CHANGELOG](CHANGELOG.md).
 
 ## Evidence
 
