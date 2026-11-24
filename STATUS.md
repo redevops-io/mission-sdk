@@ -1,6 +1,6 @@
 # Status
 
-Last verification date: **2026-10-15**. Package version `0.3.8` (`redevops_mission.__version__`).
+Last verification date: **2026-11-24**. Package version `0.3.9` (`redevops_mission.__version__`).
 
 **Maturity: alpha.** Reference SDK. Not a production service. Not independently validated.
 
