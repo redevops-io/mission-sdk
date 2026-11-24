@@ -7,6 +7,14 @@ No curated changelog has been kept for this repository. The history is:
 - Per-release commits: `git log --oneline v0.3.7..v0.3.8`, and so on.
 - Version and runtime pins per release: [COMPATIBILITY.md](COMPATIBILITY.md).
 
+## Unreleased
+
+- **Fixed: `verify_bundle` passed a bundle whose recorded `state` and `outcome` had been edited.** The digest covered the events only (and kept
+  64 bits of the hash), and success was read from the `state` field. A run that stopped at its approval gate could be relabelled `succeeded`
+  and still verify. Bundles are now schema `0.2`: the digest is a full SHA-256 over goal, state, outcome, events, steps, source and origin, and
+  verify and replay also require the recorded state to be the one the event log ends in. Schema `0.1` bundles still load; their digest is
+  reported as covering events only, and the event-log check applies to them too.
+
 ## 0.3.8
 
 - Pin kernel `agentic-os` to `v0.3.39` (was `v0.3.31`) so a consumer pinning the current kernel resolves without `--no-deps`.

@@ -140,7 +140,9 @@ correct integration wraps your existing call in a `capability`; it does not rewr
 - the minimal mission executes offline and deterministically;
 - an existing agent can be wrapped without a rewrite;
 - **replay reproduces the sealed plan** and terminal state;
-- a case bundle **verifies its own integrity** without re-running;
+- a case bundle **verifies its own integrity** without re-running: a SHA-256 digest covers its goal, state, outcome, events, steps and
+  origin, and the recorded state must be the one its event log ends in. The digest is not a signature: it shows a bundle changed after
+  export, not who produced it;
 - the security / telemetry plane is opt-in, not required for basic use.
 
 The full map is [docs/public-test-matrix.md](docs/public-test-matrix.md). Run it: `python -m pytest -q` (or a

@@ -28,6 +28,9 @@ Last verification date: **2026-10-15**. Package version `0.3.8` (`redevops_missi
 - Hard dependency on `agentic-os` through a git pin (`pyproject.toml`), so installing needs `git` and GitHub access.
 - Default execution is local and single node. "Receipt" in these docs means the sealed `CaseBundle`; the SDK
   has no class by that name.
+- "Sealed" means digested, not signed. `verify_bundle` detects a bundle whose content changed after export, and one whose recorded state
+  disagrees with its own event log. It cannot tell you who produced a bundle: someone who rewrites the file can recompute the digest. For a
+  bundle from a party you do not trust, sign the file yourself.
 - Licence: this package is Apache-2.0; the `agentic-os` dependency has its own `LICENSE.md` (titled
   "source-available, not open source"). Read both before depending on this package.
 
