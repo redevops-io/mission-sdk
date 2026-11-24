@@ -7,7 +7,7 @@ page is the human-readable matrix; `rdo doctor` reports what is **actually insta
 |---|---|---|
 | **mission-sdk** (`redevops-mission`) | `0.3.8` | this repo — the public SDK boundary |
 | Python | `>= 3.11` | `requires-python` in `pyproject.toml` |
-| `agentic-os` | pinned at tag `v0.3.39` (`pyproject.toml`; latest agentic-os tag at 2026-10-17) | hard dependency — the Mission execution/replay/governance engine, resolved from git by `pip install` |
+| `agentic-os` | pinned at tag `v0.4.2` on the default branch (`pyproject.toml`; latest agentic-os tag at 2026-11-24). The `v0.3.8` tag of this SDK pins `v0.3.39` | hard dependency — the Mission execution/replay/governance engine, resolved from git by `pip install` |
 | `runtime-contracts` | `>= 0.3` (not enforced by this SDK's `pyproject.toml`) | canonical contracts (pulled transitively where used) |
 | `context-runtime` | not enforced | context/optimization capabilities (optional at runtime). Its `__version__` is `0.1.0`; tags `v0.1.0`, `v0.2.0`, `v0.3.0` and `wN` exist, so a numeric minimum is ambiguous. |
 | `discovery-runtime` | `v0.1.x` line | discovery/intent/evidence (optional at runtime). Its real line is `v0.1.x`; tags `v0.3.0` and `v0.4.0` are superseded strays (see that repo's README), so do not pin by numeric minimum. |
@@ -29,7 +29,7 @@ Reports the installed component versions, whether the runtime imports, and wheth
 ```text
 mission-sdk        0.3.8                        OK
 python             3.12.14                      OK
-agentic-os         0.3.39                       OK
+agentic-os         0.4.2                        OK
 minimal mission    runs                         OK
 ```
 
