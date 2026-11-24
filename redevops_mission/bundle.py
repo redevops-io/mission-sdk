@@ -18,11 +18,30 @@ from dataclasses import asdict, dataclass, field
 from ._bootstrap import ensure_runtime
 from ._compile import build_registry, register_steps_template
 
-SCHEMA_VERSION = "0.1"
+SCHEMA_VERSION = "0.2"
+# Everything a reader relies on is under the digest. Schema 0.1 hashed the events only (and kept 64 bits of the hash), so the recorded state and
+# outcome of a bundle could be edited without the digest noticing.
+_SEALED = ("schema_version", "program", "goal", "mission_id", "state", "outcome", "events", "steps", "source", "origin")
 
 
-def _digest(events: list[dict]) -> str:
+def _digest_events(events: list[dict]) -> str:
+    """Schema 0.1: the events only, 64 bits. Kept so older bundles still load and check."""
     return hashlib.sha256(json.dumps(events, sort_keys=True, default=str).encode()).hexdigest()[:16]
+
+
+def _digest(doc: dict) -> str:
+    """Schema 0.2: SHA-256 over every sealed field. It detects a change made after export. It is not a signature: whoever can rewrite the bundle can
+    also recompute it, so a bundle from a party you do not trust needs a signature over the file, which this SDK does not provide."""
+    body = {k: doc.get(k) for k in _SEALED}
+    return "sha256:" + hashlib.sha256(json.dumps(body, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
+
+
+def _state_in_events(events: list[dict]):
+    """The mission state the event log itself ends in (the last MissionStateChanged), or None when the log records none."""
+    for e in reversed(events):
+        if e.get("type") == "MissionStateChanged" and isinstance(e.get("payload"), dict) and "state" in e["payload"]:
+            return str(e["payload"]["state"])
+    return None
 
 
 @dataclass
@@ -44,12 +63,27 @@ class CaseBundle:
                  events, steps: list[dict] | None = None, source: str = "human:template",
                  origin: dict | None = None) -> "CaseBundle":
         evs = [{"seq": e.seq, "type": e.type, "payload": e.payload} for e in events]
-        return cls(program=program, goal=goal, mission_id=mission_id, state=state, outcome=outcome,
-                   events=evs, steps=list(steps or []), source=source, origin=origin, digest=_digest(evs))
+        b = cls(program=program, goal=goal, mission_id=mission_id, state=state, outcome=outcome,
+                events=evs, steps=list(steps or []), source=source, origin=origin)
+        b.digest = b._expected_digest()
+        return b
+
+    def _expected_digest(self) -> str:
+        if self.schema_version == "0.1":
+            return _digest_events(self.events)
+        return _digest(json.loads(json.dumps(asdict(self), default=str)))          # the same normal form a reloaded bundle has
 
     def integrity_ok(self) -> bool:
-        """The events have not been tampered with since the bundle was built."""
-        return self.digest == _digest(self.events)
+        """Nothing under the digest changed since the bundle was built: goal, state, outcome, events, steps and origin (schema 0.1: the events only).
+        A digest is not a signature; see `_digest`."""
+        return bool(self.digest) and self.digest == self._expected_digest()
+
+    def state_matches_events(self) -> bool:
+        """The recorded terminal state is the one the event log ends in. Holds for every schema, so an edited `state` is caught in a 0.1 bundle too."""
+        return _state_in_events(self.events) == self.state
+
+    def sealed_fields(self) -> str:
+        return "events only (schema 0.1)" if self.schema_version == "0.1" else "state, outcome, events, steps, origin"
 
     def timeline(self) -> list[str]:
         return [e["type"] for e in self.events]
@@ -61,7 +95,8 @@ class CaseBundle:
     def from_json(cls, text: str) -> "CaseBundle":
         d = json.loads(text)
         return cls(**{k: d[k] for k in ("program", "goal", "mission_id", "state", "outcome", "events",
-                                        "steps", "source", "origin", "digest", "schema_version") if k in d})
+                                        "steps", "source", "origin", "digest") if k in d},
+                   schema_version=str(d.get("schema_version", "0.1")))          # a bundle that names no schema predates 0.2
 
 
 # ---- build -------------------------------------------------------------------------------------------
@@ -115,7 +150,7 @@ def replay_bundle(bundle: CaseBundle, operators) -> ReplayResult:
     rt = MissionRuntime(build_registry(operators),
                         Executor(LocalOperatorClient({op.name: op for op in operators})), store=store)
     m = rt.rehydrate(bundle.mission_id)
-    integrity = bundle.integrity_ok()
+    integrity = bundle.integrity_ok() and bundle.state_matches_events()
     return ReplayResult(
         integrity_ok=integrity,
         recorded_state=bundle.state,
@@ -165,12 +200,13 @@ class VerifyReport:
     integrity_ok: bool
     verifications: int
     nodes_succeeded: int
+    sealed: str = ""                 # what the digest covers in this bundle
 
     def to_text(self) -> str:
         return "\n".join([
             f"verify: {'PASS' if self.succeeded and self.integrity_ok else 'FAIL'}",
             f"  terminal success     {self.succeeded}",
-            f"  ledger integrity     {'ok' if self.integrity_ok else 'TAMPERED'}",
+            f"  ledger integrity     {'ok' if self.integrity_ok else 'TAMPERED'}" + (f"  (digest covers: {self.sealed})" if self.sealed else ""),
             f"  verifications run     {self.verifications}",
             f"  nodes succeeded       {self.nodes_succeeded}",
         ])
@@ -180,9 +216,13 @@ def verify_bundle(bundle: CaseBundle) -> VerifyReport:
     """Report what the runtime actually recorded: terminal success, ledger integrity, and the count of
     verification stages that ran and nodes that succeeded."""
     types = bundle.timeline()
+    # Success is what the event log ends in, and the recorded state has to agree with it: a `state` field that says more than the events do is a
+    # changed bundle, whatever its digest.
+    consistent = bundle.state_matches_events()
     return VerifyReport(
-        succeeded=bundle.state == "succeeded",
-        integrity_ok=bundle.integrity_ok(),
+        succeeded=consistent and bundle.state == "succeeded",
+        integrity_ok=bundle.integrity_ok() and consistent,
+        sealed=bundle.sealed_fields(),
         verifications=types.count("VerificationRecorded"),
         nodes_succeeded=types.count("NodeSucceeded"),
     )

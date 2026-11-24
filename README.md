@@ -25,13 +25,13 @@ run time.
 
 ```bash
 python -m venv .venv && . .venv/bin/activate
-pip install "redevops-mission @ git+https://github.com/redevops-io/mission-sdk.git@v0.3.8"
+pip install "redevops-mission @ git+https://github.com/redevops-io/mission-sdk.git@v0.3.9"
 git clone --depth 1 https://github.com/redevops-io/mission-sdk.git      # for the example files only
 python mission-sdk/examples/00_minimal/main.py              # plan, run, explain, replay, verify
 python mission-sdk/examples/02_governed_quickstart/main.py  # adds an approval gate and a sealed "receipt"
 ```
 
-(The example files come from the default branch; the installed package comes from the `v0.3.8` tag.
+(The example files come from the default branch; the installed package comes from the `v0.3.9` tag.
 `02_governed_quickstart` is included from `v0.3.8`.) What was actually run, on which OS and commit, and its exact output:
 [docs/quickstart-verified.md](docs/quickstart-verified.md).
 
@@ -74,13 +74,13 @@ a fourth runtime. This SDK is the front door to the Mission part. Glossary:
 
 ```bash
 # from a git tag (needs git on PATH)
-pip install "redevops-mission @ git+https://github.com/redevops-io/mission-sdk.git@v0.3.8"
+pip install "redevops-mission @ git+https://github.com/redevops-io/mission-sdk.git@v0.3.9"
 # …or from a clone
 pip install -e .                      # the SDK + its pinned agentic-os runtime; exposes the `rdo` command
 ```
 
 Optional adoption extras (`[langgraph]`, `[langchain]`, `[telemetry]`, `[full]`), e.g.
-`pip install "redevops-mission[langgraph] @ git+https://github.com/redevops-io/mission-sdk.git@v0.3.8"`. The default
+`pip install "redevops-mission[langgraph] @ git+https://github.com/redevops-io/mission-sdk.git@v0.3.9"`. The default
 install needs **no provider key and no network** to run the minimal example. Check the environment any time
 with `rdo doctor`.
 
@@ -140,7 +140,9 @@ correct integration wraps your existing call in a `capability`; it does not rewr
 - the minimal mission executes offline and deterministically;
 - an existing agent can be wrapped without a rewrite;
 - **replay reproduces the sealed plan** and terminal state;
-- a case bundle **verifies its own integrity** without re-running;
+- a case bundle **verifies its own integrity** without re-running: a SHA-256 digest covers its goal, state, outcome, events, steps and
+  origin, and the recorded state must be the one its event log ends in. The digest is not a signature: it shows a bundle changed after
+  export, not who produced it;
 - the security / telemetry plane is opt-in, not required for basic use.
 
 The full map is [docs/public-test-matrix.md](docs/public-test-matrix.md). Run it: `python -m pytest -q` (or a
